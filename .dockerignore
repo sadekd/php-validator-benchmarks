@@ -1,0 +1,4 @@
+vendor/
+results.*
+RESULTS.md
+.git/

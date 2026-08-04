@@ -64,13 +64,14 @@ final class ResultFormatter
     /** @param list<BenchmarkResult> $results */
     public static function display(array $results): void
     {
-        $header = ['Validator', 'Time (s)', 'Peak Memory', 'Validations/s', 'Valid', 'Invalid'];
+        $header = ['Validator', 'Median (s)', 'Spread', 'Peak Memory', 'Validations/s', 'Valid', 'Invalid'];
         $rows = [];
 
         foreach ($results as $r) {
             $rows[] = [
                 $r->name,
-                sprintf('%.3f', $r->timeSeconds),
+                sprintf('%.3f', $r->timeSeconds()),
+                sprintf('%.1f%%', $r->spreadPercent()),
                 DataGenerator::formatBytes($r->memoryPeakBytes),
                 number_format((int) $r->validationsPerSecond()),
                 number_format($r->validCount),
@@ -112,23 +113,64 @@ final class ResultFormatter
         echo $separator . "\n";
     }
 
+    /**
+     * Machine-readable run record — one per PHP version, consumed by compare.php.
+     *
+     * @param list<BenchmarkResult> $results
+     */
+    public static function exportJson(array $results, string $path, int $seed, int $repeats): void
+    {
+        $rows = [];
+        foreach ($results as $r) {
+            $rows[] = [
+                'name' => $r->name,
+                'library' => $r->library,
+                'median_time' => round($r->timeSeconds(), 6),
+                'min_time' => round($r->minTimeSeconds(), 6),
+                'max_time' => round($r->maxTimeSeconds(), 6),
+                'spread_pct' => round($r->spreadPercent(), 2),
+                'passes_per_sample' => $r->passesPerSample,
+                'times' => array_map(static fn(float $t): float => round($t, 6), $r->times),
+                'vps_median' => round($r->validationsPerSecond(), 1),
+                'vps_best' => round($r->bestValidationsPerSecond(), 1),
+                'memory_bytes' => $r->memoryPeakBytes,
+                'valid' => $r->validCount,
+                'invalid' => $r->invalidCount,
+            ];
+        }
+
+        $payload = [
+            'php_version' => PHP_VERSION,
+            'php_series' => Environment::phpSeries(),
+            'date' => date('c'),
+            'items' => $results === [] ? 0 : $results[0]->totalItems,
+            'repeats' => $repeats,
+            'seed' => $seed,
+            'packages' => Environment::packages(),
+            'results' => $rows,
+        ];
+
+        file_put_contents($path, json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+    }
+
     /** @param list<BenchmarkResult> $results */
     public static function exportMarkdown(array $results, string $path): void
     {
         $sorted = $results;
-        usort($sorted, fn(BenchmarkResult $a, BenchmarkResult $b) => $a->timeSeconds <=> $b->timeSeconds);
+        usort($sorted, fn(BenchmarkResult $a, BenchmarkResult $b) => $a->timeSeconds() <=> $b->timeSeconds());
 
         $baseline = $sorted[0]->validationsPerSecond();
         $maxVps = $sorted[0]->validationsPerSecond();
-        $maxTime = end($sorted)->timeSeconds;
+        $maxTime = end($sorted)->timeSeconds();
         $barWidth = 50;
 
         $medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
         $totalItems = $sorted[0]->totalItems;
         $validCount = $sorted[0]->validCount;
         $invalidCount = $sorted[0]->invalidCount;
+        $repeats = $sorted[0]->repeats();
 
-        $phpSeries = PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;
+        $phpSeries = Environment::phpSeries();
 
         $md = "# 🏎️ PHP {$phpSeries} Validation Benchmark\n\n";
         $md .= "> Benchmarking **" . count($results) . " validation approaches** across **" . number_format($totalItems) . " product items** on PHP " . PHP_VERSION . "\n\n";
@@ -137,16 +179,27 @@ final class ResultFormatter
         $md .= "## 📋 Test Setup\n\n";
         $md .= "| | |\n|---|---|\n";
         $md .= "| 🐘 **PHP Version** | " . PHP_VERSION . " (Alpine) |\n";
-        $md .= "| 📦 **Data Set** | " . number_format($totalItems) . " product objects (~80% valid, ~20% invalid) |\n";
+        $md .= "| 📦 **Data Set** | " . number_format($totalItems) . " product objects (~80% valid, ~20% invalid), seeded |\n";
         $md .= "| 🏗️ **Object** | `Product { sku, price, quantity, active }` |\n";
+        $md .= "| 🔁 **Sampling** | {$repeats} timed repeat(s) after an untimed 1,000-item warmup; each sample repeats the pass until it clears 0.5s; median reported |\n";
         $md .= "| 🐳 **Runtime** | Docker (`php:{$phpSeries}-cli-alpine`) |\n";
         $md .= "| 📅 **Date** | " . date('Y-m-d') . " |\n\n";
+
+        $packages = Environment::packages();
+        if ($packages !== []) {
+            $md .= "Resolved libraries on this PHP version:\n\n";
+            $md .= "| Package | Version |\n|---|---|\n";
+            foreach ($packages as $package => $version) {
+                $md .= "| `{$package}` | {$version} |\n";
+            }
+            $md .= "\n";
+        }
         $md .= "---\n\n";
 
         // Ranking table
         $md .= "## 🏆 Results — Sorted by Speed\n\n";
-        $md .= "| Rank | Validator | Time | Validations/s | vs Baseline |\n";
-        $md .= "|:---:|---|---:|---:|---:|\n";
+        $md .= "| Rank | Validator | Median time | Validations/s | Spread | vs Baseline |\n";
+        $md .= "|:---:|---|---:|---:|---:|---:|\n";
 
         foreach ($sorted as $i => $r) {
             $ratio = $baseline / $r->validationsPerSecond();
@@ -155,11 +208,12 @@ final class ResultFormatter
             if (str_contains($name, 'Property Hook')) {
                 $name .= ' 🆕';
             }
-            $md .= sprintf("| %s | **%s** | %.3fs | %s/s | %s |\n",
+            $md .= sprintf("| %s | **%s** | %.3fs | %s/s | %.1f%% | %s |\n",
                 $medals[$i] ?? ($i + 1) . '.',
                 $name,
-                $r->timeSeconds,
+                $r->timeSeconds(),
                 number_format((int) $r->validationsPerSecond()),
+                $r->spreadPercent(),
                 $ratioStr,
             );
         }
@@ -177,13 +231,13 @@ final class ResultFormatter
         $md .= "```\n\n";
 
         // Time bar chart
-        $md .= "## ⏱️ Execution Time (seconds)\n\n```\n";
+        $md .= "## ⏱️ Execution Time (seconds, median)\n\n```\n";
         foreach ($sorted as $i => $r) {
             $label = str_pad(mb_substr($r->name, 0, 18), 18);
-            $bars = max(1, (int) round(($r->timeSeconds / $maxTime) * $barWidth));
+            $bars = max(1, (int) round(($r->timeSeconds() / $maxTime) * $barWidth));
             $bar = $bars > 1 ? str_repeat('█', $bars) : '▏';
             $emoji = $i === 0 ? '⚡' : ($i === count($sorted) - 1 ? '🐌' : '');
-            $md .= sprintf("%s %s %7.3fs  %s\n", $label, str_pad($bar, $barWidth), $r->timeSeconds, $emoji);
+            $md .= sprintf("%s %s %7.3fs  %s\n", $label, str_pad($bar, $barWidth), $r->timeSeconds(), $emoji);
         }
         $md .= "```\n\n";
 
@@ -252,18 +306,19 @@ final class ResultFormatter
         // Run instructions
         $md .= "## 🚀 Run It Yourself\n\n";
         $md .= "```bash\n";
-        $md .= "# Docker (recommended)\n";
+        $md .= "# Full matrix (PHP 8.2 - 8.5) + comparison report\n";
         $md .= "./run.sh\n\n";
-        $md .= "# Custom output directory\n";
-        $md .= "./run.sh /path/to/results\n\n";
-        $md .= "# Smaller dataset / different PHP series\n";
-        $md .= "BENCH_COUNT=50000 ./run.sh\n";
-        $md .= "PHP_VERSION=8.4 ./run.sh\n\n";
-        $md .= "# Local PHP (>= 8.5)\n";
-        $md .= "composer install\n";
+        $md .= "# Single PHP version\n";
+        $md .= "PHP_VERSIONS=8.5 ./run.sh\n\n";
+        $md .= "# Custom output directory, dataset size, repeats\n";
+        $md .= "./run.sh /path/to/results\n";
+        $md .= "BENCH_COUNT=50000 BENCH_REPEATS=5 ./run.sh\n\n";
+        $md .= "# Local PHP (>= 8.2)\n";
+        $md .= "composer update\n";
         $md .= "php benchmark.php\n";
         $md .= "```\n\n";
-        $md .= "Results exported to `RESULTS.md`.\n";
+        $md .= "Per-version reports land in `RESULTS-<version>.md`, raw numbers in `results-<version>.json`, ";
+        $md .= "and the cross-version diff in `COMPARISON.md`.\n";
 
         file_put_contents($path, $md);
     }

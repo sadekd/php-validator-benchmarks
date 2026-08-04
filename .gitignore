@@ -1,3 +1,7 @@
 /vendor/
 /.idea/
 .DS_Store
+
+# Dependencies resolve per PHP version inside the image (8.2 cannot install what 8.5 locks),
+# so there is no single lock file to commit.
+/composer.lock

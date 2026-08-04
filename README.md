@@ -1,9 +1,14 @@
 # php-validator-benchmarks
 
-Nine ways to validate the same object, measured on the same data, in the same container.
-One million `Product { sku, price, quantity, active }` items per validator, PHP 8.5, Docker.
+Nine ways to validate the same object, measured on the same data, in the same container —
+across **PHP 8.2, 8.3, 8.4 and 8.5**. `Product { sku, price, quantity, active }` items,
+seeded dataset, Docker.
 
-Full generated report: **[RESULTS.md](RESULTS.md)** (regenerated on every run).
+Generated reports:
+
+- **[COMPARISON.md](COMPARISON.md)** — cross-version diff: what got faster, what got slower
+- **[RESULTS.md](RESULTS.md)** — newest PHP version in the matrix (copy of `RESULTS-8.5.md`)
+- `RESULTS-<version>.md` / `results-<version>.json` — one per PHP version
 
 ---
 
@@ -28,17 +33,43 @@ equality is the correctness check.
 
 ```mermaid
 flowchart LR
-    A["benchmark.php<br/>BENCH_COUNT env"] --> B["DataGenerator::generate()"]
+    A["benchmark.php<br/>BENCH_COUNT / BENCH_REPEATS / BENCH_SEED"] --> B["DataGenerator::generate(seed)"]
     B --> C["list&lt;Product&gt;<br/>~80% valid"]
     C --> D["BenchmarkRunner::run()"]
     D --> E["9 x ValidatorInterface"]
-    E --> F["BenchmarkResult<br/>time, peak mem, counts"]
+    E --> F["BenchmarkResult<br/>times[], peak mem, counts"]
     F --> G["ResultFormatter::display()<br/>ASCII table -> stdout"]
-    F --> H["ResultFormatter::exportMarkdown()<br/>RESULTS.md"]
+    F --> H["exportMarkdown()<br/>RESULTS-&lt;ver&gt;.md"]
+    F --> I["exportJson()<br/>results-&lt;ver&gt;.json"]
+    I --> J["compare.php<br/>COMPARISON.md"]
 ```
 
-The data is generated **once** and reused by every validator, so the comparison measures
-validation cost only — not object construction or RNG.
+The data is generated **once** per run and reused by every validator, so the comparison measures
+validation cost only — not object construction or RNG. The generator is seeded, so every PHP
+version in the matrix validates a byte-identical dataset.
+
+### The version matrix
+
+```mermaid
+flowchart TD
+    R["run.sh<br/>PHP_VERSIONS=8.2,8.3,8.4,8.5"] --> B82["docker build 8.2<br/>composer update"]
+    R --> B83["docker build 8.3"]
+    R --> B84["docker build 8.4"]
+    R --> B85["docker build 8.5"]
+    B82 --> J82["results-8.2.json"]
+    B83 --> J83["results-8.3.json"]
+    B84 --> J84["results-8.4.json"]
+    B85 --> J85["results-8.5.json"]
+    J82 --> C["compare.php"]
+    J83 --> C
+    J84 --> C
+    J85 --> C
+    C --> M["COMPARISON.md<br/>throughput + per-step deltas + noise floor"]
+```
+
+There is **no `composer.lock`**: each image resolves the newest libraries its PHP version
+supports, which is the point of the "should I upgrade" question. Each run records the versions it
+actually got, and `COMPARISON.md` flags every row where the library moved as well as the runtime.
 
 ### Per-validator measurement loop
 
@@ -48,21 +79,27 @@ sequenceDiagram
     participant V as Validator
     participant P as PHP runtime
 
-    R->>P: gc_collect_cycles() + gc_mem_caches()
     R->>V: setUp()
     Note over R,V: rule objects / factories built here — excluded from timing
-    R->>P: memory_reset_peak_usage()
-    R->>P: hrtime(true)
-    loop 1,000,000 products
-        R->>V: validate(Product)
-        V-->>R: bool
+    R->>V: validate() x 1,000 (warmup, untimed)
+    Note over R,V: forces lazy constraint-metadata building out of the timed loop
+    loop BENCH_REPEATS
+        R->>P: gc_collect_cycles() + gc_mem_caches() + memory_reset_peak_usage()
+        R->>P: hrtime(true)
+        loop BENCH_COUNT products
+            R->>V: validate(Product)
+            V-->>R: bool
+        end
+        R->>P: hrtime(true) + memory_get_peak_usage(true)
     end
-    R->>P: hrtime(true) + memory_get_peak_usage(true)
-    R-->>R: BenchmarkResult
+    R-->>R: BenchmarkResult (median / min / max)
 ```
 
 `setUp()` is deliberately outside the timed window: building a Symfony validator or a Respect
-rule chain is a one-time cost in real apps, so only the per-item work is measured.
+rule chain is a one-time cost in real apps, so only the per-item work is measured. The warmup pass
+does the same for lazily-built constraint metadata. Each validator is then timed `BENCH_REPEATS`
+times and reported by **median**, with the min–max spread printed next to it as that row's noise
+floor.
 
 ---
 
@@ -101,8 +138,11 @@ classDiagram
     class LaravelValidator {
         Factory make per item
     }
-    class RespectValidator {
-        ValidatorBuilder rule chains
+    class RespectV3Validator {
+        ValidatorBuilder chains (PHP 8.5)
+    }
+    class RespectV2Validator {
+        static v:: chains (PHP 8.2-8.4)
     }
 
     ValidatorInterface <|.. PurePhpValidator
@@ -113,8 +153,14 @@ classDiagram
     ValidatorInterface <|.. SymfonyValidator
     ValidatorInterface <|.. SymfonyAttributeValidator
     ValidatorInterface <|.. LaravelValidator
-    ValidatorInterface <|.. RespectValidator
+    ValidatorInterface <|.. RespectV3Validator
+    ValidatorInterface <|.. RespectV2Validator
 ```
+
+Two of the nine are version-conditional: **Property Hooks** only exists on PHP 8.4+ (the class is
+8.4 syntax and cannot be parsed on 8.2/8.3, so it is skipped there), and **Respect Validation** is
+implemented twice because 3.x requires PHP 8.5 — both report the same validator name so the
+comparison lines them up.
 
 | Validator | Mechanism | Backing class |
 |---|---|---|
@@ -126,50 +172,49 @@ classDiagram
 | Symfony Validator | `Assert\Collection` over array | — |
 | Symfony Attributes | attribute mapping on object | `ValidatedProduct` |
 | Laravel Validation | `Factory::make()->passes()` | — |
-| Respect Validation | `ValidatorBuilder` chains | — |
+| Respect Validation | `ValidatorBuilder` chains (3.x) / static `v::` chains (2.x) | — |
 
 ---
 
 ## Results
 
-1,000,000 items, PHP 8.5.9, `php:8.5-cli-alpine`. `RESULTS.md` holds the latest single run; the
-range column below is the spread across three runs on the same machine:
+200,000 items, 3 timed repeats, seed `20260804`, one Docker image per PHP version, same machine.
+Numbers below are the **fastest of the three repeats** (interference only ever slows a sample);
+full detail in [COMPARISON.md](COMPARISON.md).
 
-| Validator | Validations/s (latest) | Range over 3 runs | vs Pure PHP |
-|---|---:|---:|---:|
-| Pure PHP | 15,181,573/s | 8.25M – 15.18M | 1x |
-| Value Objects | 4,546,604/s | 1.39M – 4.55M | 3–6x slower |
-| webmozart/assert | 4,186,224/s | 1.39M – 4.19M | 4–6x slower |
-| filter_var() | 3,605,772/s | 1.70M – 3.61M | 4–5x slower |
-| Property Hooks | 2,740,082/s | 1.25M – 2.74M | 6–7x slower |
-| Respect Validation 3.1 | 207,293/s | 92k – 207k | 73–92x slower |
-| Symfony Attributes 8.1 | 98,180/s | 38k – 98k | 155–224x slower |
-| Symfony Validator 8.1 | 78,138/s | 25k – 78k | 194–337x slower |
-| Laravel Validation 12 | 13,758/s | 6.4k – 13.8k | 1100–1290x slower |
+| Validator | PHP 8.2 | PHP 8.3 | PHP 8.4 | PHP 8.5 | 8.2 → 8.5 |
+|---|---:|---:|---:|---:|---:|
+| Pure PHP | 11,965,995/s | 15,392,710/s | 15,852,230/s | 13,218,456/s | +10.5% |
+| Value Objects | 2,641,102/s | 2,865,332/s | 2,700,065/s | 2,864,703/s | +8.5% |
+| webmozart/assert | 2,418,617/s | 1,866,095/s | 2,791,524/s | 2,611,045/s | +8.0% |
+| filter_var() | 1,916,796/s | 2,238,891/s | 2,233,410/s | 2,119,483/s | +10.6% |
+| Property Hooks | n/a | n/a | 1,863,835/s | 1,878,512/s | — |
+| Respect Validation ⚠️ | 1,465,296/s | 1,466,133/s | 1,298,221/s | 120,836/s | **−91.8%** |
+| Symfony Attributes ⚠️ | 60,343/s | 51,078/s | 59,308/s | 53,999/s | −10.5% |
+| Symfony Validator ⚠️ | 51,471/s | 48,943/s | 48,777/s | 43,604/s | −15.3% |
+| Laravel Validation | 7,787/s | 7,734/s | 7,811/s | 7,870/s | +1.1% |
 
-All nine agreed on the verdict every run (799,674 valid / 200,326 invalid in the latest; the data
-set is regenerated per run, so the split moves).
+⚠️ = the library version changed with the PHP version, so that row is runtime **plus** library.
+All nine returned the same verdict split on every version: 160,169 valid / 39,831 invalid.
 
-Absolute rates move a lot between runs — the third run was roughly 2x faster across the board than
-the first two, machine load being the obvious suspect. Ratios against that run's own Pure PHP
-baseline stayed put, which is why the last column is the number to read.
+What the matrix actually says:
 
-Four things worth noting:
+- **Upgrading PHP buys roughly 8–11% on hand-rolled validation.** Pure PHP, Value Objects,
+  `filter_var()` and webmozart/assert all land in that band from 8.2 to 8.5. It is a real gain, but
+  it is a fraction of the noise you would see comparing two machines.
+- **Library-driven validation barely moves with the runtime.** Laravel is flat (+1.1%) across four
+  major versions — its cost is `Factory::make()` allocating a fresh `Validator` per item, which no
+  runtime improvement touches. The Symfony rows drift within their spread.
+- **Respect is the one big number, and it is not the runtime.** −91.8% is `respect/validation`
+  2.5 → 3.1, which only installs on 8.5. v3 evaluates every rule into a `Result` object instead of
+  short-circuiting on a bool, so each field allocates. On identical PHP, that library upgrade costs
+  ~12x. Staying on 2.x keeps Respect in the 1.3M/s range.
+- **Per-version ordering inside a tier is not stable** — webmozart/assert dips on 8.3 and recovers
+  on 8.4, which is contention, not a regression. The noise-floor table in `COMPARISON.md` shows
+  which rows to distrust; anything under ~15% change on a high-spread row is not a finding.
 
-- **Positions 2–5 are not stable.** The harness runs each validator once, and consecutive runs swap
-  that ordering freely — webmozart/assert and Value Objects have each taken second place across the
-  three runs above. Treat everything inside a tier as "roughly the same speed".
-- **The tier boundary is the real result.** Every hand-rolled approach clears 1.2M/s; every
-  library-driven one stays under 210k/s. That gap is far wider than the run-to-run noise.
-- **Respect 3.x is far slower than Respect 2.x was** on this workload. v3 evaluates every rule into a
-  `Result` object instead of short-circuiting on a bool, so each field allocates. Against the
-  pure-PHP baseline of its own run, v2 sat at ~8x slower; v3 sits at 73–92x. (Different hardware
-  between those runs, hence the ratio rather than the raw rate.)
-- **Laravel's cost is architectural**, not incidental: `Factory::make()` builds a fresh `Validator`
-  (plus translator lookups) per item, which is exactly how request validation uses it. It is also the
-  most repeatable number in the table.
-
-See [RESULTS.md](RESULTS.md) for the generated report — charts, memory, per-tier breakdown.
+See [RESULTS.md](RESULTS.md) for the newest version's full report — charts, memory, per-tier
+breakdown — or `RESULTS-8.2.md` … `RESULTS-8.5.md` for the others.
 
 Tiers are derived from measured throughput, not hardcoded:
 
@@ -187,49 +232,59 @@ flowchart TD
 ## Run it
 
 ```bash
-# Docker (recommended) — builds the image, writes RESULTS.md next to the repo
+# Full matrix: builds one image per PHP version, then writes COMPARISON.md
 ./run.sh
+
+# Single version
+PHP_VERSIONS=8.5 ./run.sh
+
+# Pick your own set
+PHP_VERSIONS=8.3,8.5 ./run.sh
 
 # Custom output directory
 ./run.sh /path/to/results
 
-# Smaller/larger dataset
-BENCH_COUNT=50000 ./run.sh
+# Bigger dataset, more repeats (wall clock scales with both)
+BENCH_COUNT=1000000 BENCH_REPEATS=5 ./run.sh
 
-# Different PHP series (image tag php:<version>-cli-alpine)
-PHP_VERSION=8.4 ./run.sh
-
-# Local PHP (needs PHP >= 8.5)
-composer install
-BENCH_COUNT=100000 php benchmark.php
+# Local PHP (>= 8.2), single version only
+composer update
+BENCH_COUNT=100000 BENCH_REPEATS=3 php benchmark.php
+php compare.php .            # needs >= 2 results-*.json files
 ```
 
 Environment variables:
 
 | Var | Default | Effect |
 |---|---|---|
-| `BENCH_COUNT` | `1000000` | items generated and validated |
-| `RESULTS_DIR` | script dir (`/results` in Docker) | where `RESULTS.md` is written |
-| `PHP_VERSION` | `8.5` | Docker base image tag (`run.sh` only) |
+| `PHP_VERSIONS` | `8.2,8.3,8.4,8.5` | comma-separated matrix (`run.sh` only) |
+| `PHP_VERSION` | — | legacy single-version alias for `PHP_VERSIONS` |
+| `BENCH_COUNT` | `200000` | items generated and validated |
+| `BENCH_REPEATS` | `3` | timed repeats per validator; median is reported |
+| `BENCH_SEED` | `20260804` | dataset seed — keep fixed to compare versions |
+| `RESULTS_DIR` | script dir (`/results` in Docker) | where reports are written |
 
 ---
 
 ## Layout
 
 ```
-benchmark.php              entry point — generate, run, report
+benchmark.php              entry point — generate, run, report one PHP version
+compare.php                reads results-*.json -> COMPARISON.md
 src/
   Product.php              input DTO (readonly)
-  DataGenerator.php        dataset generation + byte formatting
-  BenchmarkRunner.php      timing + memory harness
-  BenchmarkResult.php      one result row
-  ResultFormatter.php      ASCII table + RESULTS.md export
+  DataGenerator.php        seeded dataset generation + byte formatting
+  BenchmarkRunner.php      warmup + repeated timing + memory harness
+  BenchmarkResult.php      one result row (median/min/max over repeats)
+  Environment.php          PHP series + resolved library versions
+  ResultFormatter.php      ASCII table + RESULTS-<ver>.md + results-<ver>.json
+  ComparisonFormatter.php  cross-version tables, deltas, library-drift flags
   ProductValueObject.php   throwing-constructor variant
-  PropertyHookedProduct.php property-hook variant
+  PropertyHookedProduct.php property-hook variant (PHP 8.4+ syntax)
   ValidatedProduct.php     Symfony attribute variant
-  Validators/              the nine ValidatorInterface implementations
-Dockerfile                 php:${PHP_VERSION}-cli-alpine + composer install
-run.sh                     build + run + collect results
+  Validators/              the ValidatorInterface implementations
+Dockerfile                 php:${PHP_VERSION}-cli-alpine + composer update
+run.sh                     build + run the matrix + compare
 ```
 
 ---
@@ -241,19 +296,25 @@ run.sh                     build + run + collect results
   it does not say it is not worth paying.
 - **`setUp()` costs are excluded.** Laravel still pays a per-item `Validator` construction inside
   the loop, because that is how it is used in practice.
-- **Peak memory is `memory_get_peak_usage(true)`** — real allocator pages, dominated by the 1M
+- **Peak memory is `memory_get_peak_usage(true)`** — real allocator pages, dominated by the
   product array itself, so deltas between validators are small by construction.
 - **Same machine, same run.** Absolute numbers depend on hardware and PHP build; ratios travel
-  better than seconds.
-- **One sample per validator.** There is no warmup and no repetition — each validator is timed once,
-  in a fixed order, in a single process. Observed run-to-run spread is up to ~1.6x on the fast
-  approaches, which is smaller than the tier gaps but larger than the gaps between neighbours. Run it
-  a few times before drawing conclusions about any single ranking.
+  better than seconds. Compare columns within one `COMPARISON.md`, not across runs.
+- **The noise floor is printed, not assumed.** Each validator is timed `BENCH_REPEATS` times and the
+  min–max spread appears in every report. A version-to-version delta smaller than that row's spread
+  is not a result — `COMPARISON.md` has a dedicated table for exactly this check.
+- **Library versions move with the PHP version.** `symfony/validator` 8.x needs PHP >= 8.4.1 and
+  `respect/validation` 3.x needs PHP >= 8.5, so the 8.2/8.3 columns run Symfony 7.4 and Respect 2.x.
+  Those rows are marked ⚠️ in `COMPARISON.md`: the delta there is runtime *plus* library.
+- **Property Hooks has no 8.2/8.3 number** by construction — the feature does not exist there.
 
 ## Adding a validator
 
 1. Implement `Bench\Validators\ValidatorInterface` in `src/Validators/`.
 2. Add a strategy/cost note to `ResultFormatter::NOTES` (keyed by `name()`).
-3. Register the instance in the `$validators` array in `benchmark.php`.
+3. Register the instance in the `$validators` array in `benchmark.php` — guard it with a
+   `PHP_VERSION_ID` or `class_exists()` check if it cannot run on every version in the matrix.
+4. If it is library-backed, map `name() => package` in `Environment::PACKAGES` so version drift
+   gets flagged in `COMPARISON.md`.
 
 Tier placement and all charts follow automatically from the measured throughput.

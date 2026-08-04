@@ -6,9 +6,19 @@ namespace Bench;
 
 final class DataGenerator
 {
-    /** @return list<Product> */
-    public static function generate(int $count): array
+    public const DEFAULT_SEED = 20260804;
+
+    /**
+     * Seeded so every PHP version in the matrix validates byte-identical input — MT19937 output
+     * for a given seed has been stable since PHP 7.1, so the valid/invalid split does not drift
+     * between runs or versions.
+     *
+     * @return list<Product>
+     */
+    public static function generate(int $count, int $seed = self::DEFAULT_SEED): array
     {
+        mt_srand($seed, MT_RAND_MT19937);
+
         $products = [];
 
         for ($i = 0; $i < $count; $i++) {

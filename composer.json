@@ -1,13 +1,13 @@
 {
     "name": "benchmark/php-validator-benchmarks",
-    "description": "Benchmarking 9 PHP validation approaches over 1M objects on PHP 8.5",
+    "description": "Benchmarking 9 PHP validation approaches across PHP 8.2 - 8.5",
     "type": "project",
     "require": {
-        "php": "^8.5",
+        "php": "^8.2",
         "illuminate/translation": "^12.0",
         "illuminate/validation": "^12.0",
-        "respect/validation": "^3.1",
-        "symfony/validator": "^8.1",
+        "respect/validation": "^2.3 || ^3.1",
+        "symfony/validator": "^7.4 || ^8.1",
         "webmozart/assert": "^2.4"
     },
     "autoload": {

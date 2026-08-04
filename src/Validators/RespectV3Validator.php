@@ -7,7 +7,12 @@ namespace Bench\Validators;
 use Bench\Product;
 use Respect\Validation\ValidatorBuilder;
 
-final class RespectValidator implements ValidatorInterface
+/**
+ * Respect Validation 3.x — only installable on PHP >= 8.5. Older PHP versions in the
+ * matrix get {@see RespectV2Validator} instead; both report the same validator name so
+ * the cross-version comparison lines them up.
+ */
+final class RespectV3Validator implements ValidatorInterface
 {
     private ValidatorBuilder $skuRule;
     private ValidatorBuilder $priceRule;

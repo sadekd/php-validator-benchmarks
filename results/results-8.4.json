@@ -1,0 +1,187 @@
+{
+    "php_version": "8.4.24",
+    "php_series": "8.4",
+    "date": "2026-08-04T20:20:51+00:00",
+    "items": 200000,
+    "repeats": 3,
+    "seed": 20260804,
+    "packages": {
+        "illuminate/validation": "12.64.0",
+        "respect/validation": "2.5.0",
+        "symfony/validator": "8.1.2",
+        "webmozart/assert": "2.4.1"
+    },
+    "results": [
+        {
+            "name": "Pure PHP",
+            "library": null,
+            "median_time": 0.009209,
+            "min_time": 0.008828,
+            "max_time": 0.012758,
+            "spread_pct": 42.69,
+            "passes_per_sample": 25,
+            "times": [
+                0.012758,
+                0.008828,
+                0.009209
+            ],
+            "vps_median": 21718375.1,
+            "vps_best": 22656377.4,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "filter_var()",
+            "library": null,
+            "median_time": 0.041235,
+            "min_time": 0.041174,
+            "max_time": 0.042166,
+            "spread_pct": 2.41,
+            "passes_per_sample": 12,
+            "times": [
+                0.042166,
+                0.041174,
+                0.041235
+            ],
+            "vps_median": 4850306.3,
+            "vps_best": 4857466.9,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Value Objects",
+            "library": null,
+            "median_time": 0.033088,
+            "min_time": 0.032948,
+            "max_time": 0.033383,
+            "spread_pct": 1.32,
+            "passes_per_sample": 15,
+            "times": [
+                0.033088,
+                0.033383,
+                0.032948
+            ],
+            "vps_median": 6044451.8,
+            "vps_best": 6070185.2,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Property Hooks",
+            "library": null,
+            "median_time": 0.05324,
+            "min_time": 0.052414,
+            "max_time": 0.054182,
+            "spread_pct": 3.32,
+            "passes_per_sample": 10,
+            "times": [
+                0.05324,
+                0.054182,
+                0.052414
+            ],
+            "vps_median": 3756543.1,
+            "vps_best": 3815751.9,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "webmozart/assert",
+            "library": "webmozart/assert 2.4.1",
+            "median_time": 0.037217,
+            "min_time": 0.036056,
+            "max_time": 0.037627,
+            "spread_pct": 4.22,
+            "passes_per_sample": 14,
+            "times": [
+                0.036056,
+                0.037217,
+                0.037627
+            ],
+            "vps_median": 5373944.2,
+            "vps_best": 5546954.3,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Symfony Validator",
+            "library": "symfony/validator 8.1.2",
+            "median_time": 2.101292,
+            "min_time": 2.08488,
+            "max_time": 2.130995,
+            "spread_pct": 2.19,
+            "passes_per_sample": 1,
+            "times": [
+                2.08488,
+                2.130995,
+                2.101292
+            ],
+            "vps_median": 95179.5,
+            "vps_best": 95928.8,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Symfony Attributes",
+            "library": "symfony/validator 8.1.2",
+            "median_time": 1.806211,
+            "min_time": 1.775036,
+            "max_time": 1.842442,
+            "spread_pct": 3.73,
+            "passes_per_sample": 1,
+            "times": [
+                1.806211,
+                1.842442,
+                1.775036
+            ],
+            "vps_median": 110729,
+            "vps_best": 112673.8,
+            "memory_bytes": 39849984,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Laravel Validation",
+            "library": "illuminate/validation 12.64.0",
+            "median_time": 12.017298,
+            "min_time": 11.999193,
+            "max_time": 12.400304,
+            "spread_pct": 3.34,
+            "passes_per_sample": 1,
+            "times": [
+                12.017298,
+                11.999193,
+                12.400304
+            ],
+            "vps_median": 16642.7,
+            "vps_best": 16667.8,
+            "memory_bytes": 44044288,
+            "valid": 160169,
+            "invalid": 39831
+        },
+        {
+            "name": "Respect Validation",
+            "library": "respect/validation 2.5.0",
+            "median_time": 0.075727,
+            "min_time": 0.071573,
+            "max_time": 0.077246,
+            "spread_pct": 7.49,
+            "passes_per_sample": 7,
+            "times": [
+                0.075727,
+                0.071573,
+                0.077246
+            ],
+            "vps_median": 2641055.6,
+            "vps_best": 2794367,
+            "memory_bytes": 44044288,
+            "valid": 160169,
+            "invalid": 39831
+        }
+    ]
+}

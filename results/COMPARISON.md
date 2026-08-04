@@ -22,15 +22,15 @@ Generated 2026-08-04 from `results-*.json`.
 
 | Validator | PHP 8.2 | PHP 8.3 | PHP 8.4 | PHP 8.5 | 8.2 → 8.5 |
 |---|---:|---:|---:|---:|---:|
-| **Pure PHP** | 11,965,995 | 15,392,710 | 15,852,230 | 13,218,456 | ▲ +10.5% |
-| **Value Objects** | 2,641,102 | 2,865,332 | 2,700,065 | 2,864,703 | ▲ +8.5% |
-| **webmozart/assert** | 2,418,617 | 1,866,095 | 2,791,524 | 2,611,045 | ▲ +8.0% |
-| **filter_var()** | 1,916,796 | 2,238,891 | 2,233,410 | 2,119,483 | ▲ +10.6% |
-| **Property Hooks** | n/a | n/a | 1,863,835 | 1,878,512 | n/a |
-| **Respect Validation** ⚠️ | 1,465,296 | 1,466,133 | 1,298,221 | 120,836 | ▼ -91.8% |
-| **Symfony Attributes** ⚠️ | 60,343 | 51,078 | 59,308 | 53,999 | ▼ -10.5% |
-| **Symfony Validator** ⚠️ | 51,471 | 48,943 | 48,777 | 43,604 | ▼ -15.3% |
-| **Laravel Validation** | 7,787 | 7,734 | 7,811 | 7,870 | ▲ +1.1% |
+| **Pure PHP** | 32,355,096 | 25,947,801 | 22,656,377 | 28,011,365 | ▼ -13.4% |
+| **Value Objects** | 6,714,664 | 6,423,112 | 6,070,185 | 6,705,790 | ▼ -0.1% |
+| **webmozart/assert** | 5,769,638 | 5,799,384 | 5,546,954 | 5,716,856 | ▼ -0.9% |
+| **filter_var()** | 5,055,959 | 4,962,378 | 4,857,466 | 4,754,652 | ▼ -6.0% |
+| **Property Hooks** | n/a | n/a | 3,815,751 | 4,076,376 | n/a |
+| **Respect Validation** ⚠️ | 2,747,395 | 2,758,997 | 2,794,367 | 244,009 | ▼ -91.1% |
+| **Symfony Attributes** ⚠️ | 125,159 | 126,059 | 112,673 | 115,029 | ▼ -8.1% |
+| **Symfony Validator** ⚠️ | 112,186 | 106,442 | 95,928 | 99,823 | ▼ -11.0% |
+| **Laravel Validation** | 16,395 | 16,414 | 16,667 | 16,790 | ▲ +2.4% |
 
 Positive = faster on the newer PHP. `n/a` = the approach does not exist on that version.
 
@@ -46,15 +46,15 @@ Positive = faster on the newer PHP. `n/a` = the approach does not exist on that 
 
 | Validator | 8.2 → 8.3 | 8.3 → 8.4 | 8.4 → 8.5 |
 |---|---:|---:|---:|
-| **Pure PHP** | ▲ +28.6% | ▲ +3.0% | ▼ -16.6% |
-| **Value Objects** | ▲ +8.5% | ▼ -5.8% | ▲ +6.1% |
-| **webmozart/assert** | ▼ -22.8% | ▲ +49.6% | ▼ -6.5% |
-| **filter_var()** | ▲ +16.8% | ▼ -0.2% | ▼ -5.1% |
-| **Property Hooks** | n/a | n/a | ▲ +0.8% |
-| **Respect Validation** | ▲ +0.1% | ▼ -11.5% | ▼ -90.7% |
-| **Symfony Attributes** | ▼ -15.4% | ▲ +16.1% | ▼ -9.0% |
-| **Symfony Validator** | ▼ -4.9% | ▼ -0.3% | ▼ -10.6% |
-| **Laravel Validation** | ▼ -0.7% | ▲ +1.0% | ▲ +0.8% |
+| **Pure PHP** | ▼ -19.8% | ▼ -12.7% | ▲ +23.6% |
+| **Value Objects** | ▼ -4.3% | ▼ -5.5% | ▲ +10.5% |
+| **webmozart/assert** | ▲ +0.5% | ▼ -4.4% | ▲ +3.1% |
+| **filter_var()** | ▼ -1.9% | ▼ -2.1% | ▼ -2.1% |
+| **Property Hooks** | n/a | n/a | ▲ +6.8% |
+| **Respect Validation** | ▲ +0.4% | ▲ +1.3% | ▼ -91.3% |
+| **Symfony Attributes** | ▲ +0.7% | ▼ -10.6% | ▲ +2.1% |
+| **Symfony Validator** | ▼ -5.1% | ▼ -9.9% | ▲ +4.1% |
+| **Laravel Validation** | ▲ +0.1% | ▲ +1.5% | ▲ +0.7% |
 
 ---
 
@@ -64,15 +64,15 @@ Spread between the fastest and slowest repeat, as a percentage of the median. Th
 
 | Validator | PHP 8.2 | PHP 8.3 | PHP 8.4 | PHP 8.5 |
 |---|---:|---:|---:|---:|
-| **Pure PHP** | 105.7% | 69.8% | 75.8% | 57.7% |
-| **Value Objects** | 16.4% | 41.1% | 26.7% | 51.0% |
-| **webmozart/assert** | 52.4% | 24.4% | 5.3% | 8.9% |
-| **filter_var()** | 28.0% | 8.7% | 8.5% | 42.0% |
-| **Property Hooks** | n/a | n/a | 6.6% | 38.5% |
-| **Respect Validation** | 3.6% | 3.0% | 2.3% | 32.4% |
-| **Symfony Attributes** | 1.2% | 5.7% | 1.3% | 7.2% |
-| **Symfony Validator** | 18.5% | 10.3% | 15.6% | 12.8% |
-| **Laravel Validation** | 8.8% | 4.7% | 31.1% | 0.7% |
+| **Pure PHP** | 180.0% | 30.8% | 42.7% | 29.9% |
+| **Value Objects** | 4.0% | 3.4% | 1.3% | 3.6% |
+| **webmozart/assert** | 7.2% | 7.2% | 4.2% | 4.5% |
+| **filter_var()** | 6.1% | 4.3% | 2.4% | 11.9% |
+| **Property Hooks** | n/a | n/a | 3.3% | 5.7% |
+| **Respect Validation** | 4.1% | 5.3% | 7.5% | 3.3% |
+| **Symfony Attributes** | 4.5% | 32.1% | 3.7% | 10.1% |
+| **Symfony Validator** | 4.0% | 6.5% | 2.2% | 1.9% |
+| **Laravel Validation** | 10.1% | 3.0% | 3.3% | 6.5% |
 
 ## Correctness Cross-Check
 

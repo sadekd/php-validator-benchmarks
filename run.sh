@@ -2,7 +2,8 @@
 set -euo pipefail
 
 IMAGE_NAME="php-validator-benchmarks"
-RESULTS_DIR="${1:-$(pwd)}"
+RESULTS_DIR="${1:-$(pwd)/results}"
+mkdir -p "$RESULTS_DIR"
 
 # PHP_VERSION (single) still works; PHP_VERSIONS (comma-separated) drives the matrix.
 PHP_VERSIONS="${PHP_VERSIONS:-${PHP_VERSION:-8.2,8.3,8.4,8.5}}"

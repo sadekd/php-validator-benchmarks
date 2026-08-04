@@ -6,9 +6,9 @@ seeded dataset, Docker.
 
 Generated reports:
 
-- **[COMPARISON.md](COMPARISON.md)** — cross-version diff: what got faster, what got slower
-- **[RESULTS.md](RESULTS.md)** — newest PHP version in the matrix (copy of `RESULTS-8.5.md`)
-- `RESULTS-<version>.md` / `results-<version>.json` — one per PHP version
+- **[results/COMPARISON.md](results/COMPARISON.md)** — cross-version diff: what got faster, what got slower
+- **[results/RESULTS.md](results/RESULTS.md)** — newest PHP version in the matrix (copy of `RESULTS-8.5.md`)
+- `results/RESULTS-<version>.md` / `results/results-<version>.json` — one per PHP version
 
 ---
 
@@ -180,7 +180,7 @@ comparison lines them up.
 
 200,000 items, 3 timed repeats, seed `20260804`, one Docker image per PHP version, same machine.
 Numbers below are the **fastest of the three repeats** (interference only ever slows a sample);
-full detail in [COMPARISON.md](COMPARISON.md).
+full detail in [results/COMPARISON.md](results/COMPARISON.md).
 
 | Validator | PHP 8.2 | PHP 8.3 | PHP 8.4 | PHP 8.5 | 8.2 → 8.5 |
 |---|---:|---:|---:|---:|---:|
@@ -213,8 +213,8 @@ What the matrix actually says:
   on 8.4, which is contention, not a regression. The noise-floor table in `COMPARISON.md` shows
   which rows to distrust; anything under ~15% change on a high-spread row is not a finding.
 
-See [RESULTS.md](RESULTS.md) for the newest version's full report — charts, memory, per-tier
-breakdown — or `RESULTS-8.2.md` … `RESULTS-8.5.md` for the others.
+See [results/RESULTS.md](results/RESULTS.md) for the newest version's full report — charts, memory,
+per-tier breakdown — or `results/RESULTS-8.2.md` … `results/RESULTS-8.5.md` for the others.
 
 Tiers are derived from measured throughput, not hardcoded:
 
@@ -232,7 +232,7 @@ flowchart TD
 ## Run it
 
 ```bash
-# Full matrix: builds one image per PHP version, then writes COMPARISON.md
+# Full matrix: builds one image per PHP version, writes to ./results/
 ./run.sh
 
 # Single version
@@ -262,7 +262,7 @@ Environment variables:
 | `BENCH_COUNT` | `200000` | items generated and validated |
 | `BENCH_REPEATS` | `3` | timed repeats per validator; median is reported |
 | `BENCH_SEED` | `20260804` | dataset seed — keep fixed to compare versions |
-| `RESULTS_DIR` | script dir (`/results` in Docker) | where reports are written |
+| `RESULTS_DIR` | `./results` (`/results` in Docker) | where reports are written |
 
 ---
 

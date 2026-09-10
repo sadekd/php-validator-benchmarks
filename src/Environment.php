@@ -23,6 +23,7 @@ final class Environment
         'Symfony Attributes' => 'symfony/validator',
         'Laravel Validation' => 'illuminate/validation',
         'webmozart/assert' => 'webmozart/assert',
+        'Valinor' => 'cuyz/valinor',
     ];
 
     public static function phpSeries(): string

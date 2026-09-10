@@ -18,6 +18,7 @@ use Bench\Validators\RespectV2Validator;
 use Bench\Validators\RespectV3Validator;
 use Bench\Validators\SymfonyAttributeValidator;
 use Bench\Validators\SymfonyValidator;
+use Bench\Validators\ValinorValidator;
 use Bench\Validators\ValueObjectValidator;
 use Bench\Validators\WebmozartAssertValidator;
 
@@ -61,6 +62,7 @@ $validators[] = new WebmozartAssertValidator();
 $validators[] = new SymfonyValidator();
 $validators[] = new SymfonyAttributeValidator();
 $validators[] = new LaravelValidator();
+$validators[] = new ValinorValidator();
 
 // respect/validation 3.x requires PHP >= 8.5; older versions resolve to 2.x, which has a
 // different API for the same rules.

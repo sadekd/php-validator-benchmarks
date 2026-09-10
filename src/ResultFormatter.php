@@ -164,7 +164,7 @@ final class ResultFormatter
         $maxTime = end($sorted)->timeSeconds();
         $barWidth = 50;
 
-        $medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+        $medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
         $totalItems = $sorted[0]->totalItems;
         $validCount = $sorted[0]->validCount;
         $invalidCount = $sorted[0]->invalidCount;

@@ -1,9 +1,10 @@
 {
     "name": "benchmark/php-validator-benchmarks",
-    "description": "Benchmarking 9 PHP validation approaches across PHP 8.2 - 8.5",
+    "description": "Benchmarking 10 PHP validation approaches across PHP 8.2 - 8.5",
     "type": "project",
     "require": {
         "php": "^8.2",
+        "cuyz/valinor": "^2.6",
         "illuminate/translation": "^12.0",
         "illuminate/validation": "^12.0",
         "respect/validation": "^2.3 || ^3.1",

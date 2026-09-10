@@ -1,25 +1,26 @@
 # 🏎️ PHP 8.4 Validation Benchmark
 
-> Benchmarking **9 validation approaches** across **200,000 product items** on PHP 8.4.24
+> Benchmarking **10 validation approaches** across **200,000 product items** on PHP 8.4.25
 
 ## 📋 Test Setup
 
 | | |
 |---|---|
-| 🐘 **PHP Version** | 8.4.24 (Alpine) |
+| 🐘 **PHP Version** | 8.4.25 (Alpine) |
 | 📦 **Data Set** | 200,000 product objects (~80% valid, ~20% invalid), seeded |
 | 🏗️ **Object** | `Product { sku, price, quantity, active }` |
 | 🔁 **Sampling** | 3 timed repeat(s) after an untimed 1,000-item warmup; each sample repeats the pass until it clears 0.5s; median reported |
 | 🐳 **Runtime** | Docker (`php:8.4-cli-alpine`) |
-| 📅 **Date** | 2026-08-04 |
+| 📅 **Date** | 2026-09-10 |
 
 Resolved libraries on this PHP version:
 
 | Package | Version |
 |---|---|
-| `illuminate/validation` | 12.64.0 |
+| `cuyz/valinor` | 2.6.0 |
+| `illuminate/validation` | 12.69.2 |
 | `respect/validation` | 2.5.0 |
-| `symfony/validator` | 8.1.2 |
+| `symfony/validator` | 8.1.6 |
 | `webmozart/assert` | 2.4.1 |
 
 ---
@@ -28,44 +29,47 @@ Resolved libraries on this PHP version:
 
 | Rank | Validator | Median time | Validations/s | Spread | vs Baseline |
 |:---:|---|---:|---:|---:|---:|
-| 🥇 | **Pure PHP** | 0.009s | 21,718,375/s | 42.7% | 1.0x |
-| 🥈 | **Value Objects** | 0.033s | 6,044,451/s | 1.3% | 3.6x slower |
-| 🥉 | **webmozart/assert** | 0.037s | 5,373,944/s | 4.2% | 4.0x slower |
-| 4️⃣ | **filter_var()** | 0.041s | 4,850,306/s | 2.4% | 4.5x slower |
-| 5️⃣ | **Property Hooks 🆕** | 0.053s | 3,756,543/s | 3.3% | 5.8x slower |
-| 6️⃣ | **Respect Validation** | 0.076s | 2,641,055/s | 7.5% | 8.2x slower |
-| 7️⃣ | **Symfony Attributes** | 1.806s | 110,729/s | 3.7% | 196.1x slower |
-| 8️⃣ | **Symfony Validator** | 2.101s | 95,179/s | 2.2% | 228.2x slower |
-| 9️⃣ | **Laravel Validation** | 12.017s | 16,642/s | 3.3% | 1305.0x slower |
+| 🥇 | **Pure PHP** | 0.008s | 23,769,256/s | 27.5% | 1.0x |
+| 🥈 | **webmozart/assert** | 0.036s | 5,507,217/s | 2.7% | 4.3x slower |
+| 🥉 | **Value Objects** | 0.039s | 5,162,505/s | 8.1% | 4.6x slower |
+| 4️⃣ | **filter_var()** | 0.054s | 3,675,510/s | 5.7% | 6.5x slower |
+| 5️⃣ | **Property Hooks 🆕** | 0.058s | 3,467,473/s | 14.6% | 6.9x slower |
+| 6️⃣ | **Respect Validation** | 0.070s | 2,840,382/s | 1.4% | 8.4x slower |
+| 7️⃣ | **Symfony Attributes** | 1.687s | 118,525/s | 1.8% | 200.5x slower |
+| 8️⃣ | **Valinor** | 1.896s | 105,496/s | 1.6% | 225.3x slower |
+| 9️⃣ | **Symfony Validator** | 2.052s | 97,464/s | 0.6% | 243.9x slower |
+| 🔟 | **Laravel Validation** | 11.725s | 17,057/s | 1.3% | 1393.5x slower |
 
 ---
 
 ## 📊 Speed Comparison (validations/second)
 
 ```
-Pure PHP           ██████████████████████████████████████████████████ 21,718,375/s  🥇
-Value Objects      ██████████████         6,044,451/s  🥈
-webmozart/assert   ████████████               5,373,944/s  🥉
-filter_var()       ███████████                  4,850,306/s  4️⃣
-Property Hooks     █████████                        3,756,543/s  5️⃣
-Respect Validation ██████                                 2,641,055/s  6️⃣
-Symfony Attributes ▏                                                110,729/s  7️⃣
-Symfony Validator  ▏                                                95,179/s  8️⃣
-Laravel Validation ▏                                                16,642/s  9️⃣
+Pure PHP           ██████████████████████████████████████████████████ 23,769,256/s  🥇
+webmozart/assert   ████████████               5,507,217/s  🥈
+Value Objects      ███████████                  5,162,505/s  🥉
+filter_var()       ████████                           3,675,510/s  4️⃣
+Property Hooks     ███████                              3,467,473/s  5️⃣
+Respect Validation ██████                                 2,840,382/s  6️⃣
+Symfony Attributes ▏                                                118,525/s  7️⃣
+Valinor            ▏                                                105,496/s  8️⃣
+Symfony Validator  ▏                                                97,464/s  9️⃣
+Laravel Validation ▏                                                17,057/s  🔟
 ```
 
 ## ⏱️ Execution Time (seconds, median)
 
 ```
-Pure PHP           ▏                                                  0.009s  ⚡
-Value Objects      ▏                                                  0.033s  
-webmozart/assert   ▏                                                  0.037s  
-filter_var()       ▏                                                  0.041s  
-Property Hooks     ▏                                                  0.053s  
-Respect Validation ▏                                                  0.076s  
-Symfony Attributes ████████                             1.806s  
-Symfony Validator  █████████                          2.101s  
-Laravel Validation ██████████████████████████████████████████████████  12.017s  🐌
+Pure PHP           ▏                                                  0.008s  ⚡
+webmozart/assert   ▏                                                  0.036s  
+Value Objects      ▏                                                  0.039s  
+filter_var()       ▏                                                  0.054s  
+Property Hooks     ▏                                                  0.058s  
+Respect Validation ▏                                                  0.070s  
+Symfony Attributes ███████                                1.687s  
+Valinor            ████████                             1.896s  
+Symfony Validator  █████████                          2.052s  
+Laravel Validation ██████████████████████████████████████████████████  11.725s  🐌
 ```
 
 ## 🧠 Memory Usage
@@ -73,13 +77,14 @@ Laravel Validation ████████████████████�
 | Validator | Peak Memory | Delta from Baseline |
 |---|---:|---:|
 | Pure PHP | 38.00 MB | — |
-| Value Objects | 38.00 MB | — |
-| webmozart/assert | 38.00 MB | — |
+| webmozart/assert | 40.00 MB | +2.00 MB |
+| Value Objects | 40.00 MB | +2.00 MB |
 | filter_var() | 38.00 MB | — |
-| Property Hooks | 38.00 MB | — |
-| Respect Validation | 42.00 MB | +4.00 MB |
-| Symfony Attributes | 38.00 MB | — |
-| Symfony Validator | 38.00 MB | — |
+| Property Hooks | 40.00 MB | +2.00 MB |
+| Respect Validation | 44.00 MB | +6.00 MB |
+| Symfony Attributes | 40.00 MB | +2.00 MB |
+| Valinor | 44.00 MB | +6.00 MB |
+| Symfony Validator | 40.00 MB | +2.00 MB |
 | Laravel Validation | 42.00 MB | +4.00 MB |
 
 > 💡 Memory differences are minimal — all approaches fit comfortably within a few MB of each other.
@@ -92,35 +97,36 @@ Laravel Validation ████████████████████�
 
 | Approach | Validations/s | Strategy | Cost per item |
 |---|---:|---|---|
-| **Pure PHP** | 21,718,375/s | Direct `if` checks on typed properties | Baseline — no allocation, no calls |
-| **Value Objects** | 6,044,451/s | Constructor validation + `try/catch` | Object allocation + exception path on failure |
-| **webmozart/assert** | 5,373,944/s | Static assertion methods + `try/catch` | Static call overhead + exception path |
-| **filter_var()** | 4,850,306/s | PHP built-in C filter functions | Redundant type checks on already-typed props |
-| **Property Hooks** | 3,756,543/s | PHP 8.4+ `set` hooks with validation | Hook dispatch per property write |
-| **Respect Validation** | 2,641,055/s | Rule chain evaluated per field | Result objects built per rule evaluation |
+| **Pure PHP** | 23,769,256/s | Direct `if` checks on typed properties | Baseline — no allocation, no calls |
+| **webmozart/assert** | 5,507,217/s | Static assertion methods + `try/catch` | Static call overhead + exception path |
+| **Value Objects** | 5,162,505/s | Constructor validation + `try/catch` | Object allocation + exception path on failure |
+| **filter_var()** | 3,675,510/s | PHP built-in C filter functions | Redundant type checks on already-typed props |
+| **Property Hooks** | 3,467,473/s | PHP 8.4+ `set` hooks with validation | Hook dispatch per property write |
+| **Respect Validation** | 2,840,382/s | Rule chain evaluated per field | Result objects built per rule evaluation |
 
 ### 🚶 Tier 2 — Library Speed (100k – 1M validations/s)
 
 | Approach | Validations/s | Strategy | Cost per item |
 |---|---:|---|---|
-| **Symfony Attributes** | 110,729/s | Attribute-mapped constraints on an object | Constraint tree walk + metadata lookup |
+| **Symfony Attributes** | 118,525/s | Attribute-mapped constraints on an object | Constraint tree walk + metadata lookup |
+| **Valinor** | 105,496/s | — | — |
 
 ### 🐢 Tier 3 — Framework Speed (< 100k validations/s)
 
 | Approach | Validations/s | Strategy | Cost per item |
 |---|---:|---|---|
-| **Symfony Validator** | 95,179/s | `Collection` constraint over an array | Constraint tree walk + array conversion |
-| **Laravel Validation** | 16,642/s | New `Validator` per `make()` call | Validator + translator construction per item |
+| **Symfony Validator** | 97,464/s | `Collection` constraint over an array | Constraint tree walk + array conversion |
+| **Laravel Validation** | 17,057/s | New `Validator` per `make()` call | Validator + translator construction per item |
 
 ---
 
 ## 💡 Key Takeaways
 
-1. 🏆 **Pure PHP is ~1305x faster than Laravel Validation** — simple `if` checks on typed properties are unbeatable
-2. **Property Hooks** — 3,756,543/s (5.8x vs Pure PHP): Hook dispatch per property write
-3. **webmozart/assert** — 5,373,944/s (4.0x vs Pure PHP): Static call overhead + exception path
-4. **filter_var()** — 4,850,306/s (4.5x vs Pure PHP): Redundant type checks on already-typed props
-5. ✅ **All 9 approaches produce identical results** — correctness verified (160,169 valid / 39,831 invalid)
+1. 🏆 **Pure PHP is ~1394x faster than Laravel Validation** — simple `if` checks on typed properties are unbeatable
+2. **Property Hooks** — 3,467,473/s (6.9x vs Pure PHP): Hook dispatch per property write
+3. **webmozart/assert** — 5,507,217/s (4.3x vs Pure PHP): Static call overhead + exception path
+4. **filter_var()** — 3,675,510/s (6.5x vs Pure PHP): Redundant type checks on already-typed props
+5. ✅ **All 10 approaches produce identical results** — correctness verified (160,169 valid / 39,831 invalid)
 
 ---
 

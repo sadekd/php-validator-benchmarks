@@ -1,6 +1,6 @@
 # php-validator-benchmarks
 
-Nine ways to validate the same object, measured on the same data, in the same container —
+Ten ways to validate the same object, measured on the same data, in the same container —
 across **PHP 8.2, 8.3, 8.4 and 8.5**. `Product { sku, price, quantity, active }` items,
 seeded dataset, Docker.
 
@@ -36,7 +36,7 @@ flowchart LR
     A["benchmark.php<br/>BENCH_COUNT / BENCH_REPEATS / BENCH_SEED"] --> B["DataGenerator::generate(seed)"]
     B --> C["list&lt;Product&gt;<br/>~80% valid"]
     C --> D["BenchmarkRunner::run()"]
-    D --> E["9 x ValidatorInterface"]
+    D --> E["10 x ValidatorInterface"]
     E --> F["BenchmarkResult<br/>times[], peak mem, counts"]
     F --> G["ResultFormatter::display()<br/>ASCII table -> stdout"]
     F --> H["exportMarkdown()<br/>RESULTS-&lt;ver&gt;.md"]
@@ -103,7 +103,7 @@ floor.
 
 ---
 
-## The nine approaches
+## The ten approaches
 
 ```mermaid
 classDiagram
@@ -138,6 +138,9 @@ classDiagram
     class LaravelValidator {
         Factory make per item
     }
+    class ValinorValidator {
+        MapperBuilder::map()
+    }
     class RespectV3Validator {
         ValidatorBuilder chains (PHP 8.5)
     }
@@ -153,11 +156,12 @@ classDiagram
     ValidatorInterface <|.. SymfonyValidator
     ValidatorInterface <|.. SymfonyAttributeValidator
     ValidatorInterface <|.. LaravelValidator
+    ValidatorInterface <|.. ValinorValidator
     ValidatorInterface <|.. RespectV3Validator
     ValidatorInterface <|.. RespectV2Validator
 ```
 
-Two of the nine are version-conditional: **Property Hooks** only exists on PHP 8.4+ (the class is
+Two of the ten are version-conditional: **Property Hooks** only exists on PHP 8.4+ (the class is
 8.4 syntax and cannot be parsed on 8.2/8.3, so it is skipped there), and **Respect Validation** is
 implemented twice because 3.x requires PHP 8.5 — both report the same validator name so the
 comparison lines them up.
@@ -172,6 +176,7 @@ comparison lines them up.
 | Symfony Validator | `Assert\Collection` over array | — |
 | Symfony Attributes | attribute mapping on object | `ValidatedProduct` |
 | Laravel Validation | `Factory::make()->passes()` | — |
+| Valinor | `MapperBuilder::map()` + throwing constructor | `ValinorProduct` |
 | Respect Validation | `ValidatorBuilder` chains (3.x) / static `v::` chains (2.x) | — |
 
 ---
@@ -180,38 +185,43 @@ comparison lines them up.
 
 200,000 items, 3 timed repeats, seed `20260804`, one Docker image per PHP version, same machine.
 Numbers below are the **fastest of the three repeats** (interference only ever slows a sample);
-full detail in [results/COMPARISON.md](results/COMPARISON.md).
+full detail, including the noise floor per row, is in [results/COMPARISON.md](results/COMPARISON.md).
 
 | Validator | PHP 8.2 | PHP 8.3 | PHP 8.4 | PHP 8.5 | 8.2 → 8.5 |
 |---|---:|---:|---:|---:|---:|
-| Pure PHP | 11,965,995/s | 15,392,710/s | 15,852,230/s | 13,218,456/s | +10.5% |
-| Value Objects | 2,641,102/s | 2,865,332/s | 2,700,065/s | 2,864,703/s | +8.5% |
-| webmozart/assert | 2,418,617/s | 1,866,095/s | 2,791,524/s | 2,611,045/s | +8.0% |
-| filter_var() | 1,916,796/s | 2,238,891/s | 2,233,410/s | 2,119,483/s | +10.6% |
-| Property Hooks | n/a | n/a | 1,863,835/s | 1,878,512/s | — |
-| Respect Validation ⚠️ | 1,465,296/s | 1,466,133/s | 1,298,221/s | 120,836/s | **−91.8%** |
-| Symfony Attributes ⚠️ | 60,343/s | 51,078/s | 59,308/s | 53,999/s | −10.5% |
-| Symfony Validator ⚠️ | 51,471/s | 48,943/s | 48,777/s | 43,604/s | −15.3% |
-| Laravel Validation | 7,787/s | 7,734/s | 7,811/s | 7,870/s | +1.1% |
+| Pure PHP | 29,322,082/s | 23,258,671/s | 25,104,005/s | 22,316,797/s | −23.9% |
+| Value Objects | 6,596,835/s | 6,418,904/s | 5,384,255/s | 6,152,334/s | −6.7% |
+| webmozart/assert | 5,642,589/s | 5,714,268/s | 5,584,459/s | 5,825,855/s | +3.2% |
+| filter_var() | 3,908,480/s | 4,109,257/s | 3,744,761/s | 3,680,007/s | −5.8% |
+| Property Hooks | n/a | n/a | 3,936,840/s | 4,102,236/s | — |
+| Respect Validation ⚠️ | 2,770,897/s | 2,814,479/s | 2,868,964/s | 213,797/s | **−92.3%** |
+| Symfony Attributes ⚠️ | 133,212/s | 134,408/s | 119,502/s | 120,990/s | −9.2% |
+| Symfony Validator ⚠️ | 111,315/s | 109,980/s | 98,086/s | 98,785/s | −11.3% |
+| Valinor | 107,879/s | 104,159/s | 106,973/s | 91,517/s | −15.2% |
+| Laravel Validation | 16,424/s | 16,875/s | 17,219/s | 14,717/s | −10.4% |
 
 ⚠️ = the library version changed with the PHP version, so that row is runtime **plus** library.
-All nine returned the same verdict split on every version: 160,169 valid / 39,831 invalid.
+All ten returned the same verdict split on every version: 160,169 valid / 39,831 invalid.
 
 What the matrix actually says:
 
-- **Upgrading PHP buys roughly 8–11% on hand-rolled validation.** Pure PHP, Value Objects,
-  `filter_var()` and webmozart/assert all land in that band from 8.2 to 8.5. It is a real gain, but
-  it is a fraction of the noise you would see comparing two machines.
-- **Library-driven validation barely moves with the runtime.** Laravel is flat (+1.1%) across four
-  major versions — its cost is `Factory::make()` allocating a fresh `Validator` per item, which no
-  runtime improvement touches. The Symfony rows drift within their spread.
-- **Respect is the one big number, and it is not the runtime.** −91.8% is `respect/validation`
-  2.5 → 3.1, which only installs on 8.5. v3 evaluates every rule into a `Result` object instead of
-  short-circuiting on a bool, so each field allocates. On identical PHP, that library upgrade costs
-  ~12x. Staying on 2.x keeps Respect in the 1.3M/s range.
-- **Per-version ordering inside a tier is not stable** — webmozart/assert dips on 8.3 and recovers
-  on 8.4, which is contention, not a regression. The noise-floor table in `COMPARISON.md` shows
-  which rows to distrust; anything under ~15% change on a high-spread row is not a finding.
+- **This run is noisier than a bare-metal comparison.** Pure PHP alone had a 146% spread on PHP 8.2
+  (see the noise floor table in `COMPARISON.md`) — contention from running the whole matrix
+  back-to-back on one shared machine. Treat any single-digit-percent delta above as within the
+  noise floor, not a finding; only rows with a large, consistent move across versions are real.
+- **Respect is still the one big, real number.** −92.3% is `respect/validation` 2.5 → 3.1, which
+  only installs on PHP 8.5. v3 evaluates every rule into a `Result` object instead of
+  short-circuiting on a bool, so each field allocates. Staying on 2.x keeps Respect in the
+  ~2.8M/s range; the drop is the library upgrade, not the runtime.
+- **Valinor lands in the same tier as Symfony, slightly behind it.** `MapperBuilder::map()` builds
+  a full mapping tree and validates through reflection-derived type info, so throughput
+  (~90k–110k/s) sits close to `Symfony Validator`/`Symfony Attributes` rather than near the
+  hand-rolled or `Value Objects` tier — the cost is the generic mapping machinery, not just the
+  two `\RuntimeException` checks in `ValinorProduct`.
+- **Library-driven validation barely tracks the PHP runtime.** Laravel, the Symfony rows, and
+  Valinor all move by roughly the same amount PHP 8.2 → 8.5 as they do version-to-version inside
+  the noise floor — their cost is dominated by per-item object/reflection overhead that PHP's own
+  performance work doesn't touch.
 
 See [results/RESULTS.md](results/RESULTS.md) for the newest version's full report — charts, memory,
 per-tier breakdown — or `results/RESULTS-8.2.md` … `results/RESULTS-8.5.md` for the others.

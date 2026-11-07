@@ -1,0 +1,11 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  test:
+    runs-on: docker
+    container: alpine:3.22
+    steps:
+      - run: echo "No CI for this project yet. Replace .forgejo/workflows/ci.yml (workflow ci, job test)." && exit 1

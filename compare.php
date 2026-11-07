@@ -19,13 +19,26 @@ if (count($files) < 2) {
 }
 
 $runs = [];
+$unreadable = [];
 foreach ($files as $file) {
     $decoded = json_decode((string) file_get_contents($file), true);
     if (!is_array($decoded) || !isset($decoded['php_series'], $decoded['results'])) {
         fwrite(STDERR, "Skipping unreadable run file: {$file}\n");
+        $unreadable[] = $file;
         continue;
     }
     $runs[] = $decoded;
+}
+
+if (count($runs) < 2) {
+    fwrite(STDERR, sprintf(
+        "Need at least two readable runs to compare, found %d; COMPARISON.md not written.\n",
+        count($runs),
+    ));
+    foreach ($unreadable as $file) {
+        fwrite(STDERR, "  - unreadable: {$file}\n");
+    }
+    exit(1);
 }
 
 $problems = ComparisonFormatter::validate($runs);

@@ -44,9 +44,25 @@ $validators = ValidatorSet::forThisRuntime();
 // BENCH_REVERSE=1 runs them in reverse order. Both are off by default.
 $only = array_filter(array_map('trim', explode(',', (string) getenv('BENCH_ONLY'))), 'strlen');
 if ($only !== []) {
+    $available = array_map(static fn ($v) => $v->name(), $validators);
+    $unknown = array_values(array_diff($only, $available));
+    if ($unknown !== []) {
+        $hint = in_array('Property Hooks', $unknown, true) && !Environment::supportsPropertyHooks()
+            ? ' (Property Hooks needs PHP 8.4+, running ' . PHP_VERSION . ')'
+            : '';
+        fwrite(STDERR, sprintf(
+            "BENCH_ONLY: unknown or unavailable validator(s): %s%s. Available: %s\n",
+            implode(', ', $unknown),
+            $hint,
+            implode(', ', $available),
+        ));
+        exit(1);
+    }
+    fwrite(STDERR, "WARNING: BENCH_ONLY is set; reports contain only the selected validators. Do not publish.\n");
     $validators = array_values(array_filter($validators, static fn ($v) => in_array($v->name(), $only, true)));
 }
 if (getenv('BENCH_REVERSE') === '1') {
+    fwrite(STDERR, "WARNING: BENCH_REVERSE is set; validators run in reverse order. Do not publish.\n");
     $validators = array_reverse($validators);
 }
 

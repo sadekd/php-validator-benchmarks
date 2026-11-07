@@ -115,4 +115,13 @@ final class ResultFormatterTest extends TestCase
             $i++;
         }
     }
+
+    public function test_every_registered_validator_has_a_note(): void
+    {
+        $notes = (new \ReflectionClassConstant(ResultFormatter::class, 'NOTES'))->getValue();
+
+        foreach (\Bench\ValidatorSet::forThisRuntime() as $validator) {
+            self::assertArrayHasKey($validator->name(), $notes, "ResultFormatter::NOTES lacks an entry for {$validator->name()}");
+        }
+    }
 }

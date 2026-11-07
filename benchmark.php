@@ -45,11 +45,11 @@ foreach ($validators as $validator) {
     printf("Running: %s...\n", $validator->name());
     $result = $runner->run($validator, $products);
     printf(
-        "  median %.4fs/pass  (min %.4fs / max %.4fs, spread %.1f%%, %d pass(es) per sample)\n",
+        "  median %.4fs/pass  (min %.4fs / max %.4fs, spread %s, %d pass(es) per sample)\n",
         $result->timeSeconds(),
         $result->minTimeSeconds(),
         $result->maxTimeSeconds(),
-        $result->spreadPercent(),
+        $result->spreadDisplay(),
         $result->passesPerSample,
     );
     $results[] = $result;

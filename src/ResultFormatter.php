@@ -71,7 +71,7 @@ final class ResultFormatter
             $rows[] = [
                 $r->name,
                 sprintf('%.3f', $r->timeSeconds()),
-                sprintf('%.1f%%', $r->spreadPercent()),
+                $r->spreadDisplay(),
                 DataGenerator::formatBytes($r->memoryPeakBytes),
                 number_format((int) $r->validationsPerSecond()),
                 number_format($r->validCount),
@@ -208,12 +208,12 @@ final class ResultFormatter
             if (str_contains($name, 'Property Hook')) {
                 $name .= ' 🆕';
             }
-            $md .= sprintf("| %s | **%s** | %.3fs | %s/s | %.1f%% | %s |\n",
+            $md .= sprintf("| %s | **%s** | %.3fs | %s/s | %s | %s |\n",
                 $medals[$i] ?? ($i + 1) . '.',
                 $name,
                 $r->timeSeconds(),
                 number_format((int) $r->validationsPerSecond()),
-                $r->spreadPercent(),
+                $r->spreadDisplay(),
                 $ratioStr,
             );
         }

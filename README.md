@@ -272,6 +272,8 @@ Environment variables:
 | `BENCH_COUNT` | `200000` via `run.sh`; `1000000` via `php benchmark.php` | items generated and validated |
 | `BENCH_REPEATS` | `3` via `run.sh`; `1` via `php benchmark.php` | timed repeats per validator; per-version `RESULTS-*.md` report the median, `COMPARISON.md` the best. With 1 repeat the spread shows as `n/a (1 repeat)` |
 | `BENCH_SEED` | `20260804` | dataset seed — keep fixed to compare versions |
+| `BENCH_ONLY` | — | `php benchmark.php` only: comma-separated validator names to run (e.g. `Pure PHP,Valinor`); diagnostics for order effects |
+| `BENCH_REVERSE` | — | `php benchmark.php` only: `1` runs validators in reverse order. Diagnostics only; do not use for published results |
 | `RESULTS_DIR` | `./results` (`/results` in Docker) | where reports are written |
 
 ---

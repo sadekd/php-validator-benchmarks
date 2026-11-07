@@ -1,11 +1,26 @@
+# Unit tests only. The benchmark itself (run.sh, Docker image per PHP version) never runs in CI:
+# it is slow, and timings on a shared CI host mean nothing.
 name: ci
 on:
   push:
     branches: [main]
   pull_request:
 jobs:
-  test:
+  test:                       # newest PHP: every validator, incl. property hooks and Respect 3
     runs-on: docker
-    container: alpine:3.22
+    container: php:8.5-cli-alpine
     steps:
-      - run: echo "No CI for this project yet. Replace .forgejo/workflows/ci.yml (workflow ci, job test)." && exit 1
+      - run: apk add --no-cache nodejs git unzip   # nodejs for the checkout action
+      - uses: https://data.forgejo.org/actions/checkout@v4
+      - run: curl -sS https://getcomposer.org/installer | php -- --quiet --install-dir=/usr/local/bin --filename=composer
+      - run: composer update --no-interaction --no-progress
+      - run: vendor/bin/phpunit
+  test-php82:                 # oldest supported PHP: Symfony 7.4, Respect 2, no property hooks
+    runs-on: docker
+    container: php:8.2-cli-alpine
+    steps:
+      - run: apk add --no-cache nodejs git unzip   # nodejs for the checkout action
+      - uses: https://data.forgejo.org/actions/checkout@v4
+      - run: curl -sS https://getcomposer.org/installer | php -- --quiet --install-dir=/usr/local/bin --filename=composer
+      - run: composer update --no-interaction --no-progress
+      - run: vendor/bin/phpunit

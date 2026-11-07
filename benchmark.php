@@ -10,17 +10,7 @@ use Bench\BenchmarkRunner;
 use Bench\DataGenerator;
 use Bench\Environment;
 use Bench\ResultFormatter;
-use Bench\Validators\FilterVarValidator;
-use Bench\Validators\LaravelValidator;
-use Bench\Validators\PropertyHookValidator;
-use Bench\Validators\PurePhpValidator;
-use Bench\Validators\RespectV2Validator;
-use Bench\Validators\RespectV3Validator;
-use Bench\Validators\SymfonyAttributeValidator;
-use Bench\Validators\SymfonyValidator;
-use Bench\Validators\ValinorValidator;
-use Bench\Validators\ValueObjectValidator;
-use Bench\Validators\WebmozartAssertValidator;
+use Bench\ValidatorSet;
 
 $count = (int) (getenv('BENCH_COUNT') ?: 1_000_000);
 $repeats = max(1, (int) (getenv('BENCH_REPEATS') ?: 1));
@@ -45,30 +35,10 @@ printf(
 
 $runner = new BenchmarkRunner(repeats: $repeats);
 
-$validators = [
-    new PurePhpValidator(),
-    new FilterVarValidator(),
-    new ValueObjectValidator(),
-];
-
-// Property hooks are PHP 8.4+ syntax — the class cannot even be parsed on 8.2/8.3.
-if (Environment::supportsPropertyHooks()) {
-    $validators[] = new PropertyHookValidator();
-} else {
+if (!Environment::supportsPropertyHooks()) {
     printf("Skipping: Property Hooks (needs PHP 8.4+, running %s)\n\n", PHP_VERSION);
 }
-
-$validators[] = new WebmozartAssertValidator();
-$validators[] = new SymfonyValidator();
-$validators[] = new SymfonyAttributeValidator();
-$validators[] = new LaravelValidator();
-$validators[] = new ValinorValidator();
-
-// respect/validation 3.x requires PHP >= 8.5; older versions resolve to 2.x, which has a
-// different API for the same rules.
-$validators[] = class_exists(\Respect\Validation\ValidatorBuilder::class)
-    ? new RespectV3Validator()
-    : new RespectV2Validator();
+$validators = ValidatorSet::forThisRuntime();
 
 $results = [];
 foreach ($validators as $validator) {

@@ -21,6 +21,7 @@ final class ResultFormatter
         'Symfony Validator' => ['`Collection` constraint over an array', 'Constraint tree walk + array conversion'],
         'Symfony Attributes' => ['Attribute-mapped constraints on an object', 'Constraint tree walk + metadata lookup'],
         'Laravel Validation' => ['New `Validator` per `make()` call', 'Validator + translator construction per item'],
+        'Valinor' => ['`TreeMapper` maps an array to a typed class + `catch MappingError`', 'Type-tree mapping + error tree built per item'],
     ];
 
     /**

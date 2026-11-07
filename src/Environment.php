@@ -36,6 +36,50 @@ final class Environment
         return PHP_VERSION_ID >= 80400;
     }
 
+    /**
+     * OPcache / JIT state of this process, recorded so a reader can tell which config produced the ratios.
+     *
+     * @return array{opcache_loaded: bool, opcache_enable_cli: bool, opcache_jit: string, opcache_jit_buffer_size: int}
+     */
+    public static function runtime(): array
+    {
+        $loaded = extension_loaded('Zend OPcache');
+        $jit = $loaded ? ini_get('opcache.jit') : false;
+
+        $buffer = $loaded ? ini_get('opcache.jit_buffer_size') : false;
+
+        return [
+            'opcache_loaded' => $loaded,
+            'opcache_enable_cli' => $loaded && filter_var(ini_get('opcache.enable_cli'), FILTER_VALIDATE_BOOLEAN),
+            'opcache_jit' => $jit === false || $jit === '' ? 'off' : (string) $jit,
+            // JIT only runs with a non-zero buffer, whatever opcache.jit says (it defaults to "tracing").
+            'opcache_jit_buffer_size' => $buffer === false || $buffer === '' ? 0 : ini_parse_quantity($buffer),
+        ];
+    }
+
+    /**
+     * One-line label for a runtime() block (also decoded from JSON); null when the run predates it.
+     *
+     * @param array<string, mixed>|null $runtime
+     */
+    public static function describeRuntime(?array $runtime): ?string
+    {
+        if ($runtime === null) {
+            return null;
+        }
+        if (empty($runtime['opcache_loaded'])) {
+            return 'OPcache not loaded, JIT off';
+        }
+        if (empty($runtime['opcache_enable_cli'])) {
+            return 'OPcache off (CLI), JIT inactive';
+        }
+        $jit = (string) ($runtime['opcache_jit'] ?? 'off');
+        $jitOff = in_array(strtolower($jit), ['', '0', 'off', 'disable', 'disabled'], true)
+            || (isset($runtime['opcache_jit_buffer_size']) && (int) $runtime['opcache_jit_buffer_size'] <= 0);
+
+        return 'OPcache on, JIT ' . ($jitOff ? 'off' : $jit);
+    }
+
     public static function version(string $package): ?string
     {
         if (!class_exists(InstalledVersions::class) || !InstalledVersions::isInstalled($package)) {

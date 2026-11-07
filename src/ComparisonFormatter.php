@@ -73,6 +73,9 @@ final class ComparisonFormatter
 
         $md .= "| **PHP** | " . implode(' | ', array_map(static fn(array $r): string => (string) $r['php_version'], $runs)) . " |\n";
 
+        $labels = array_map(static fn(array $r): ?string => Environment::describeRuntime($r['runtime'] ?? null), $runs);
+        $md .= "| **OPcache / JIT** | " . implode(' | ', array_map(static fn(?string $l): string => $l ?? '—', $labels)) . " |\n";
+
         $packageNames = [];
         foreach ($runs as $run) {
             foreach (array_keys($run['packages']) as $package) {
@@ -87,6 +90,9 @@ final class ComparisonFormatter
             $md .= "| `{$package}` | " . implode(' | ', $cells) . " |\n";
         }
         $md .= "\n";
+        if (count(array_unique(array_filter($labels, static fn(?string $l): bool => $l !== null))) > 1) {
+            $md .= "⚠️ **OPcache/JIT configuration differs between these runs**, so deltas may come from the config, not the PHP version.\n\n";
+        }
 
         // Throughput matrix
         $md .= "## Throughput (validations/s, best of {$repeats})\n\n";

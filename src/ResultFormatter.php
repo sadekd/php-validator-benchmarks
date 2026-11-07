@@ -148,6 +148,7 @@ final class ResultFormatter
             'repeats' => $repeats,
             'seed' => $seed,
             'packages' => Environment::packages(),
+            'runtime' => Environment::runtime(),
             'results' => $rows,
         ];
 
@@ -184,6 +185,7 @@ final class ResultFormatter
         $md .= "| 🏗️ **Object** | `Product { sku, price, quantity, active }` |\n";
         $md .= "| 🔁 **Sampling** | {$repeats} timed repeat(s) after an untimed 1,000-item warmup; each sample repeats the pass until it clears 0.5s; median reported |\n";
         $md .= "| 🐳 **Runtime** | Docker (`php:{$phpSeries}-cli-alpine`) |\n";
+        $md .= "| ⚙️ **OPcache / JIT** | " . Environment::describeRuntime(Environment::runtime()) . " |\n";
         $md .= "| 📅 **Date** | " . date('Y-m-d') . " |\n\n";
 
         $packages = Environment::packages();

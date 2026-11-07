@@ -106,7 +106,7 @@ final class ComparisonFormatter
             $first = $bySeries[$baseSeries] ?? null;
             $last = $bySeries[end($seriesList)] ?? null;
             $change = $first !== null && $last !== null
-                ? self::changeLabel((float) $first['vps_best'], (float) $last['vps_best'])
+                ? self::changeLabel((float) $first['vps_best'], (float) $last['vps_best'], self::noiseOf($first, $last))
                 : 'n/a';
 
             $marker = '';
@@ -118,7 +118,7 @@ final class ComparisonFormatter
             $md .= "| **{$name}**{$marker} | " . implode(' | ', $cells) . " | {$change} |\n";
         }
         $md .= "\n";
-        $md .= "Positive = faster on the newer PHP. `n/a` = the approach does not exist on that version.\n\n";
+        $md .= "Positive = faster on the newer PHP. `n/a` = the approach does not exist on that version. `≈ within noise` = the delta is smaller than the larger spread of the two compared cells (see Noise Floor).\n\n";
 
         if ($footnotes !== []) {
             $md .= "> ⚠️ **Library version changed across these columns** — the delta is runtime *plus* library, not runtime alone:\n>\n";
@@ -144,7 +144,11 @@ final class ComparisonFormatter
                 $cells = [];
                 foreach ($steps as [$from, $to]) {
                     $cells[] = isset($bySeries[$from], $bySeries[$to])
-                        ? self::changeLabel((float) $bySeries[$from]['vps_best'], (float) $bySeries[$to]['vps_best'])
+                        ? self::changeLabel(
+                            (float) $bySeries[$from]['vps_best'],
+                            (float) $bySeries[$to]['vps_best'],
+                            self::noiseOf($bySeries[$from], $bySeries[$to]),
+                        )
                         : 'n/a';
                 }
                 $md .= "| **{$name}** | " . implode(' | ', $cells) . " |\n";
@@ -157,6 +161,7 @@ final class ComparisonFormatter
         $md .= "Spread between the fastest and slowest repeat, as a percentage of the median. ";
         $md .= "The tables above use the fastest repeat, which sidesteps most of this, but a row with a large ";
         $md .= "spread was contended while it ran — treat small deltas on those rows with suspicion. ";
+        $md .= "Deltas smaller than the larger spread of the two cells compared are suffixed `≈ within noise`. ";
         $md .= "With a single repeat no spread is measured, so it shows as `n/a (1 repeat)`, not 0%.\n\n";
         $md .= "| Validator | " . implode(' | ', array_map(static fn(string $s): string => "PHP {$s}", $seriesList)) . " |\n";
         $md .= "|---" . str_repeat('|---:', count($runs)) . "|\n";
@@ -188,7 +193,18 @@ final class ComparisonFormatter
         file_put_contents($path, $md);
     }
 
-    private static function changeLabel(float $from, float $to): string
+    /**
+     * The larger spread_pct of the two compared rows.
+     *
+     * @param array<string, mixed> $a
+     * @param array<string, mixed> $b
+     */
+    private static function noiseOf(array $a, array $b): float
+    {
+        return max((float) ($a['spread_pct'] ?? 0.0), (float) ($b['spread_pct'] ?? 0.0));
+    }
+
+    private static function changeLabel(float $from, float $to, float $noise = 0.0): string
     {
         if ($from <= 0.0) {
             return 'n/a';
@@ -197,7 +213,9 @@ final class ComparisonFormatter
         $pct = (($to - $from) / $from) * 100.0;
         $arrow = $pct >= 0 ? '▲' : '▼';
 
-        return sprintf('%s %+.1f%%', $arrow, $pct);
+        $label = sprintf('%s %+.1f%%', $arrow, $pct);
+
+        return abs($pct) < $noise ? $label . ' ≈ within noise' : $label;
     }
 
     /** @param array<string, array<string, mixed>> $bySeries */

@@ -124,4 +124,38 @@ final class ResultFormatterTest extends TestCase
             self::assertArrayHasKey($validator->name(), $notes, "ResultFormatter::NOTES lacks an entry for {$validator->name()}");
         }
     }
+
+    public function test_takeaway_says_identical_when_all_splits_match(): void
+    {
+        $results = [
+            new BenchmarkResult('A', [1.0], 0, 100, 80, 20),
+            new BenchmarkResult('B', [2.0], 0, 100, 80, 20),
+        ];
+        $path = $this->tempPath('.md');
+
+        ResultFormatter::exportMarkdown($results, $path);
+
+        $md = (string) file_get_contents($path);
+        self::assertStringContainsString('All 2 approaches produce identical results', $md);
+        self::assertStringContainsString('80 valid / 20 invalid', $md);
+        self::assertStringNotContainsString('disagree', $md);
+    }
+
+    public function test_takeaway_reports_disagreement_with_each_split_and_validator(): void
+    {
+        $results = [
+            new BenchmarkResult('A', [1.0], 0, 100, 80, 20),
+            new BenchmarkResult('B', [2.0], 0, 100, 79, 21),
+            new BenchmarkResult('C', [3.0], 0, 100, 80, 20),
+        ];
+        $path = $this->tempPath('.md');
+
+        ResultFormatter::exportMarkdown($results, $path);
+
+        $md = (string) file_get_contents($path);
+        self::assertStringContainsString('Validators disagree', $md);
+        self::assertStringNotContainsString('identical', $md);
+        self::assertStringContainsString('80 valid / 20 invalid: A, C', $md);
+        self::assertStringContainsString('79 valid / 21 invalid: B', $md);
+    }
 }

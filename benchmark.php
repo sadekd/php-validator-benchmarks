@@ -92,3 +92,13 @@ ResultFormatter::exportMarkdown($results, $markdownPath);
 ResultFormatter::exportJson($results, $jsonPath, $seed, $repeats);
 
 printf("\nResults exported to %s and %s\n", $markdownPath, $jsonPath);
+
+$splits = ResultFormatter::splits($results);
+if (count($splits) > 1) {
+    $lines = [];
+    foreach ($splits as $split => $names) {
+        $lines[] = sprintf('  %s: %s', $split, implode(', ', $names));
+    }
+    fwrite(STDERR, "ERROR: validators disagree on valid/invalid counts:\n" . implode("\n", $lines) . "\n");
+    exit(1);
+}

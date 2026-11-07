@@ -50,6 +50,24 @@ final class ResultFormatter
         return array_values(array_filter($buckets, static fn(array $b): bool => $b['results'] !== []));
     }
 
+    /**
+     * Distinct valid/invalid splits across results, keyed by label,
+     * each with the names of the validators that produced it.
+     *
+     * @param  list<BenchmarkResult> $results
+     * @return array<string, list<string>>
+     */
+    public static function splits(array $results): array
+    {
+        $splits = [];
+        foreach ($results as $r) {
+            $key = number_format($r->validCount) . ' valid / ' . number_format($r->invalidCount) . ' invalid';
+            $splits[$key][] = $r->name;
+        }
+
+        return $splits;
+    }
+
     /** @param list<BenchmarkResult> $results */
     private static function find(array $results, string $name): ?BenchmarkResult
     {
@@ -168,8 +186,7 @@ final class ResultFormatter
 
         $medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
         $totalItems = $sorted[0]->totalItems;
-        $validCount = $sorted[0]->validCount;
-        $invalidCount = $sorted[0]->invalidCount;
+        $splits = self::splits($sorted);
         $repeats = $sorted[0]->repeats();
 
         $phpSeries = Environment::phpSeries();
@@ -297,13 +314,24 @@ final class ResultFormatter
                 (self::NOTES[$name] ?? ['', '—'])[1],
             );
         }
-        $md .= sprintf(
-            "%d. ✅ **All %d approaches produce identical results** — correctness verified (%s valid / %s invalid)\n\n",
-            $i,
-            count($results),
-            number_format($validCount),
-            number_format($invalidCount),
-        );
+        if (count($splits) === 1) {
+            $md .= sprintf(
+                "%d. ✅ **All %d approaches produce identical results** — correctness verified (%s)\n\n",
+                $i,
+                count($results),
+                array_key_first($splits),
+            );
+        } else {
+            $parts = [];
+            foreach ($splits as $split => $names) {
+                $parts[] = sprintf('%s: %s', $split, implode(', ', $names));
+            }
+            $md .= sprintf(
+                "%d. ❌ **Validators disagree on valid/invalid counts** — results are not comparable (%s)\n\n",
+                $i,
+                implode('; ', $parts),
+            );
+        }
         $md .= "---\n\n";
 
         // Run instructions

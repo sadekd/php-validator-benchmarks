@@ -40,6 +40,16 @@ if (!Environment::supportsPropertyHooks()) {
 }
 $validators = ValidatorSet::forThisRuntime();
 
+// Diagnostics for order effects (issue #25): BENCH_ONLY=name1,name2 filters validators by name,
+// BENCH_REVERSE=1 runs them in reverse order. Both are off by default.
+$only = array_filter(array_map('trim', explode(',', (string) getenv('BENCH_ONLY'))), 'strlen');
+if ($only !== []) {
+    $validators = array_values(array_filter($validators, static fn ($v) => in_array($v->name(), $only, true)));
+}
+if (getenv('BENCH_REVERSE') === '1') {
+    $validators = array_reverse($validators);
+}
+
 $results = [];
 foreach ($validators as $validator) {
     printf("Running: %s...\n", $validator->name());

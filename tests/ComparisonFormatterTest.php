@@ -10,11 +10,11 @@ use PHPUnit\Framework\TestCase;
 final class ComparisonFormatterTest extends TestCase
 {
     /** @param array<string, array{0: float, 1: float}>|null $rows name => [vps_best, spread_pct] */
-    private static function fixtureRun(string $series, array $rows): array
+    private static function fixtureRun(string $series, array $rows, ?string $library = null, int $valid = 8, int $invalid = 2): array
     {
         $results = [];
         foreach ($rows as $name => [$vps, $spread]) {
-            $results[] = ['name' => $name, 'vps_best' => $vps, 'spread_pct' => $spread, 'library' => null, 'valid' => 8, 'invalid' => 2];
+            $results[] = ['name' => $name, 'vps_best' => $vps, 'spread_pct' => $spread, 'library' => $library, 'valid' => $valid, 'invalid' => $invalid];
         }
 
         return ['php_series' => $series, 'php_version' => $series . '.0', 'items' => 10, 'repeats' => 3, 'seed' => 1, 'packages' => [], 'results' => $results];
@@ -65,5 +65,50 @@ final class ComparisonFormatterTest extends TestCase
         $row = $this->rowOf($md, 'gone', 0);
         $this->assertStringEndsWith('| n/a |', $row);
         $this->assertStringNotContainsString('within noise', $row);
+    }
+
+    public function testLibraryDriftIsMarkedAndFootnoted(): void
+    {
+        $md = $this->render([
+            self::fixtureRun('8.2', ['lib' => [1000.0, 1.0]], 'x 1.0'),
+            self::fixtureRun('8.3', ['lib' => [1000.0, 1.0]], 'x 2.0'),
+        ]);
+
+        $this->assertStringContainsString(' ⚠️', $this->rowOf($md, 'lib', 0));
+        $this->assertStringContainsString('Library version changed', $md);
+        $this->assertStringContainsString('PHP 8.3 → `x 2.0`', $md);
+    }
+
+    public function testSameLibraryIsNotFlagged(): void
+    {
+        $md = $this->render([
+            self::fixtureRun('8.2', ['lib' => [1000.0, 1.0]], 'x 1.0'),
+            self::fixtureRun('8.3', ['lib' => [1000.0, 1.0]], 'x 1.0'),
+        ]);
+
+        $this->assertStringNotContainsString('⚠️', $this->rowOf($md, 'lib', 0));
+        $this->assertStringNotContainsString('Library version changed', $md);
+    }
+
+    public function testVerdictSplitDisagreementIsReported(): void
+    {
+        $md = $this->render([
+            self::fixtureRun('8.2', ['v' => [1000.0, 1.0]], null, 8, 2),
+            self::fixtureRun('8.3', ['v' => [1000.0, 1.0]], null, 7, 3),
+        ]);
+
+        $this->assertStringContainsString('Validators disagreed on the verdict split', $md);
+        $this->assertStringNotContainsString('returned the same verdict split', $md);
+    }
+
+    public function testIdenticalVerdictSplitsAgree(): void
+    {
+        $md = $this->render([
+            self::fixtureRun('8.2', ['v' => [1000.0, 1.0]]),
+            self::fixtureRun('8.3', ['v' => [1000.0, 1.0]]),
+        ]);
+
+        $this->assertStringContainsString('Every validator on every PHP version returned the same verdict split', $md);
+        $this->assertStringNotContainsString('Validators disagreed', $md);
     }
 }

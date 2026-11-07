@@ -28,7 +28,23 @@ foreach ($files as $file) {
     $runs[] = $decoded;
 }
 
+$problems = ComparisonFormatter::validate($runs);
+if ($problems !== []) {
+    fwrite(STDERR, "Refusing to compare these runs; COMPARISON.md not written:\n");
+    foreach ($problems as $problem) {
+        fwrite(STDERR, "  - {$problem}\n");
+    }
+    fwrite(STDERR, "Remove stale results-*.json files or re-run the matrix with the same BENCH_COUNT, BENCH_SEED and repeats.\n");
+    exit(1);
+}
+
 $out = rtrim($dir, '/') . '/COMPARISON.md';
 ComparisonFormatter::build($runs, $out);
 
 printf("Compared %d PHP versions -> %s\n", count($runs), $out);
+
+$splits = ComparisonFormatter::verdictSplits($runs);
+if (count($splits) > 1) {
+    fwrite(STDERR, "Validators disagreed on the verdict split: " . implode(', ', $splits) . " (see Correctness Cross-Check in {$out}).\n");
+    exit(1);
+}

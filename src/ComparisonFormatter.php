@@ -14,6 +14,57 @@ namespace Bench;
 final class ComparisonFormatter
 {
     /**
+     * Reasons these runs must not be compared: differing items/seed/repeats, or a repeated php_series.
+     *
+     * @param  list<array<string, mixed>> $runs decoded results-<series>.json payloads
+     * @return list<string> empty when the runs are comparable
+     */
+    public static function validate(array $runs): array
+    {
+        $problems = [];
+        foreach (['items', 'seed', 'repeats'] as $field) {
+            $values = [];
+            foreach ($runs as $run) {
+                $values[(string) ($run[$field] ?? 'missing')][] = (string) $run['php_series'];
+            }
+            if (count($values) > 1) {
+                $parts = [];
+                foreach ($values as $value => $series) {
+                    $parts[] = sprintf('%s (PHP %s)', $value, implode(', ', $series));
+                }
+                $problems[] = "`{$field}` differs between runs: " . implode(' vs ', $parts);
+            }
+        }
+
+        $counts = array_count_values(array_map(static fn(array $r): string => (string) $r['php_series'], $runs));
+        foreach ($counts as $series => $count) {
+            if ($count > 1) {
+                $problems[] = "php_series {$series} appears in {$count} run files";
+            }
+        }
+
+        return $problems;
+    }
+
+    /**
+     * Distinct "N valid / M invalid" splits across all validators and runs; more than one means disagreement.
+     *
+     * @param  list<array<string, mixed>> $runs
+     * @return list<string>
+     */
+    public static function verdictSplits(array $runs): array
+    {
+        $splits = [];
+        foreach ($runs as $run) {
+            foreach ($run['results'] as $row) {
+                $splits[sprintf('%s valid / %s invalid', number_format((int) $row['valid']), number_format((int) $row['invalid']))] = true;
+            }
+        }
+
+        return array_keys($splits);
+    }
+
+    /**
      * @param  list<array<string, mixed>> $runs decoded results-<series>.json payloads
      */
     public static function build(array $runs, string $path): void
@@ -184,17 +235,12 @@ final class ComparisonFormatter
 
         // Correctness cross-check
         $md .= "## Correctness Cross-Check\n\n";
-        $splits = [];
-        foreach ($runs as $run) {
-            foreach ($run['results'] as $row) {
-                $splits[sprintf('%s valid / %s invalid', number_format((int) $row['valid']), number_format((int) $row['invalid']))] = true;
-            }
-        }
+        $splits = self::verdictSplits($runs);
         $md .= count($splits) === 1
             ? "Every validator on every PHP version returned the same verdict split: **"
-                . array_key_first($splits) . "** — the dataset is seeded, so this is comparable across columns.\n"
+                . $splits[0] . "** — the dataset is seeded, so this is comparable across columns.\n"
             : "⚠️ Validators disagreed on the verdict split across versions: `"
-                . implode('`, `', array_keys($splits)) . "`.\n";
+                . implode('`, `', $splits) . "`.\n";
 
         file_put_contents($path, $md);
     }

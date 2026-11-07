@@ -111,4 +111,42 @@ final class ComparisonFormatterTest extends TestCase
         $this->assertStringContainsString('Every validator on every PHP version returned the same verdict split', $md);
         $this->assertStringNotContainsString('Validators disagreed', $md);
     }
+
+    public function testValidateAcceptsMatchingRuns(): void
+    {
+        $this->assertSame([], ComparisonFormatter::validate([
+            self::fixtureRun('8.2', ['a' => [1.0, 1.0]]),
+            self::fixtureRun('8.3', ['a' => [1.0, 1.0]]),
+        ]));
+    }
+
+    public function testValidateRejectsDifferingItemsSeedAndRepeats(): void
+    {
+        foreach (['items', 'seed', 'repeats'] as $field) {
+            $other = self::fixtureRun('8.3', ['a' => [1.0, 1.0]]);
+            $other[$field] = 99;
+            $problems = ComparisonFormatter::validate([self::fixtureRun('8.2', ['a' => [1.0, 1.0]]), $other]);
+            $this->assertCount(1, $problems, $field);
+            $this->assertStringContainsString("`{$field}` differs", $problems[0]);
+        }
+    }
+
+    public function testValidateRejectsDuplicateSeries(): void
+    {
+        $problems = ComparisonFormatter::validate([
+            self::fixtureRun('8.2', ['a' => [1.0, 1.0]]),
+            self::fixtureRun('8.2', ['a' => [2.0, 1.0]]),
+        ]);
+        $this->assertCount(1, $problems);
+        $this->assertStringContainsString('php_series 8.2 appears in 2', $problems[0]);
+    }
+
+    public function testVerdictSplitsListsDistinctSplits(): void
+    {
+        $same = [self::fixtureRun('8.2', ['a' => [1.0, 1.0]]), self::fixtureRun('8.3', ['a' => [1.0, 1.0]])];
+        $this->assertSame(['8 valid / 2 invalid'], ComparisonFormatter::verdictSplits($same));
+
+        $split = [self::fixtureRun('8.2', ['a' => [1.0, 1.0]]), self::fixtureRun('8.3', ['a' => [1.0, 1.0]], null, 7, 3)];
+        $this->assertCount(2, ComparisonFormatter::verdictSplits($split));
+    }
 }

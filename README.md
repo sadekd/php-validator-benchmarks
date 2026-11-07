@@ -99,7 +99,7 @@ sequenceDiagram
 rule chain is a one-time cost in real apps, so only the per-item work is measured. The warmup pass
 does the same for lazily-built constraint metadata. Each validator is then timed `BENCH_REPEATS`
 times and reported by **median**, with the min–max spread printed next to it as that row's noise
-floor.
+floor (shown as `n/a (1 repeat)` when `BENCH_REPEATS=1`).
 
 ---
 
@@ -269,8 +269,8 @@ Environment variables:
 |---|---|---|
 | `PHP_VERSIONS` | `8.2,8.3,8.4,8.5` | comma-separated matrix (`run.sh` only) |
 | `PHP_VERSION` | — | legacy single-version alias for `PHP_VERSIONS` |
-| `BENCH_COUNT` | `200000` | items generated and validated |
-| `BENCH_REPEATS` | `3` | timed repeats per validator; median is reported |
+| `BENCH_COUNT` | `200000` via `run.sh`; `1000000` via `php benchmark.php` | items generated and validated |
+| `BENCH_REPEATS` | `3` via `run.sh`; `1` via `php benchmark.php` | timed repeats per validator; per-version `RESULTS-*.md` report the median, `COMPARISON.md` the best. With 1 repeat the spread shows as `n/a (1 repeat)` |
 | `BENCH_SEED` | `20260804` | dataset seed — keep fixed to compare versions |
 | `RESULTS_DIR` | `./results` (`/results` in Docker) | where reports are written |
 
@@ -286,6 +286,7 @@ src/
   DataGenerator.php        seeded dataset generation + byte formatting
   BenchmarkRunner.php      warmup + repeated timing + memory harness
   BenchmarkResult.php      one result row (median/min/max over repeats)
+  ValidatorSet.php         the validators run on this PHP version (forThisRuntime())
   Environment.php          PHP series + resolved library versions
   ResultFormatter.php      ASCII table + RESULTS-<ver>.md + results-<ver>.json
   ComparisonFormatter.php  cross-version tables, deltas, library-drift flags
@@ -293,6 +294,7 @@ src/
   PropertyHookedProduct.php property-hook variant (PHP 8.4+ syntax)
   ValidatedProduct.php     Symfony attribute variant
   Validators/              the ValidatorInterface implementations
+tests/                     PHPUnit: rule boundaries, validator agreement, generator, runner
 Dockerfile                 php:${PHP_VERSION}-cli-alpine + composer update
 run.sh                     build + run the matrix + compare
 ```
@@ -322,7 +324,7 @@ run.sh                     build + run the matrix + compare
 
 1. Implement `Bench\Validators\ValidatorInterface` in `src/Validators/`.
 2. Add a strategy/cost note to `ResultFormatter::NOTES` (keyed by `name()`).
-3. Register the instance in the `$validators` array in `benchmark.php` — guard it with a
+3. Register the instance in `ValidatorSet::forThisRuntime()` (`src/ValidatorSet.php`, used by `benchmark.php` and the tests) — guard it with a
    `PHP_VERSION_ID` or `class_exists()` check if it cannot run on every version in the matrix.
 4. If it is library-backed, map `name() => package` in `Environment::PACKAGES` so version drift
    gets flagged in `COMPARISON.md`.

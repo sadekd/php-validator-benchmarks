@@ -156,14 +156,15 @@ final class ComparisonFormatter
         $md .= "## Noise Floor\n\n";
         $md .= "Spread between the fastest and slowest repeat, as a percentage of the median. ";
         $md .= "The tables above use the fastest repeat, which sidesteps most of this, but a row with a large ";
-        $md .= "spread was contended while it ran — treat small deltas on those rows with suspicion.\n\n";
+        $md .= "spread was contended while it ran — treat small deltas on those rows with suspicion. ";
+        $md .= "With a single repeat no spread is measured, so it shows as `n/a (1 repeat)`, not 0%.\n\n";
         $md .= "| Validator | " . implode(' | ', array_map(static fn(string $s): string => "PHP {$s}", $seriesList)) . " |\n";
         $md .= "|---" . str_repeat('|---:', count($runs)) . "|\n";
         foreach ($byName as $name => $bySeries) {
             $cells = [];
             foreach ($seriesList as $series) {
                 $cells[] = isset($bySeries[$series])
-                    ? sprintf('%.1f%%', (float) $bySeries[$series]['spread_pct'])
+                    ? BenchmarkResult::formatSpread((float) $bySeries[$series]['spread_pct'], $repeats)
                     : 'n/a';
             }
             $md .= "| **{$name}** | " . implode(' | ', $cells) . " |\n";

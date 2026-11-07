@@ -55,6 +55,17 @@ readonly class BenchmarkResult
             : 0.0;
     }
 
+    /** Spread for display: a single repeat measured no noise, so say so instead of printing 0.0%. */
+    public function spreadDisplay(): string
+    {
+        return self::formatSpread($this->spreadPercent(), $this->repeats());
+    }
+
+    public static function formatSpread(float $spreadPercent, int $repeats): string
+    {
+        return $repeats < 2 ? 'n/a (1 repeat)' : sprintf('%.1f%%', $spreadPercent);
+    }
+
     public function validationsPerSecond(): float
     {
         return $this->totalItems / $this->timeSeconds();

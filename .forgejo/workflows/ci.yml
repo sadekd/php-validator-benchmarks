@@ -1,6 +1,7 @@
 # Unit tests only. The benchmark itself (run.sh, Docker image per PHP version) never runs in CI:
 # it is slow, and timings on a shared CI host mean nothing.
 # Network steps (apk, git fetch, Composer installer, composer update) retry up to 3 times with a 5s pause,
+# and the Composer installer is verified against its published SHA-384 (.forgejo/scripts/install-composer.sh),
 # so a network blip does not fail the job; a real failure still fails after the last attempt.
 name: ci
 on:
@@ -29,8 +30,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           TOKEN: ${{ github.token }}
-      - run: |
-          for i in 1 2 3; do curl -fsS -o /tmp/composer-setup.php https://getcomposer.org/installer && php /tmp/composer-setup.php --quiet --install-dir=/usr/local/bin --filename=composer && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
+      - run: sh .forgejo/scripts/install-composer.sh
       - run: |
           for i in 1 2 3; do composer update --no-interaction --no-progress && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
       - run: vendor/bin/phpunit
@@ -55,8 +55,7 @@ jobs:
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
           TOKEN: ${{ github.token }}
-      - run: |
-          for i in 1 2 3; do curl -fsS -o /tmp/composer-setup.php https://getcomposer.org/installer && php /tmp/composer-setup.php --quiet --install-dir=/usr/local/bin --filename=composer && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
+      - run: sh .forgejo/scripts/install-composer.sh
       - run: |
           for i in 1 2 3; do composer update --no-interaction --no-progress && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
       - run: vendor/bin/phpunit

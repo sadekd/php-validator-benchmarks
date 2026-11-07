@@ -1,6 +1,6 @@
 # Unit tests only. The benchmark itself (run.sh, Docker image per PHP version) never runs in CI:
 # it is slow, and timings on a shared CI host mean nothing.
-# Network steps (apk, Composer installer, composer update) retry up to 3 times with a 5s pause,
+# Network steps (apk, git fetch, Composer installer, composer update) retry up to 3 times with a 5s pause,
 # so a network blip does not fail the job; a real failure still fails after the last attempt.
 name: ci
 on:
@@ -12,10 +12,23 @@ jobs:
     runs-on: docker
     container: php:8.5-cli-alpine
     steps:
-      # nodejs for the checkout action
       - run: |
-          for i in 1 2 3; do apk add --no-cache nodejs git unzip && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
-      - uses: https://data.forgejo.org/actions/checkout@v4
+          for i in 1 2 3; do apk add --no-cache git unzip && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
+      # plain git fetch of the exact commit under test (no checkout action, so no nodejs)
+      - run: |
+          for i in 1 2 3; do
+            rm -rf .git
+            git init -q . \
+              && git remote add origin "$(echo "$SERVER_URL" | sed "s#://#://ci:$TOKEN@#")/$REPO.git" \
+              && git fetch -q --depth 1 origin "$SHA" \
+              && git checkout -q FETCH_HEAD && exit 0
+            echo "attempt $i failed"; sleep 5
+          done; exit 1
+        env:
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
       - run: |
           for i in 1 2 3; do curl -fsS -o /tmp/composer-setup.php https://getcomposer.org/installer && php /tmp/composer-setup.php --quiet --install-dir=/usr/local/bin --filename=composer && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
       - run: |
@@ -25,10 +38,23 @@ jobs:
     runs-on: docker
     container: php:8.2-cli-alpine
     steps:
-      # nodejs for the checkout action
       - run: |
-          for i in 1 2 3; do apk add --no-cache nodejs git unzip && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
-      - uses: https://data.forgejo.org/actions/checkout@v4
+          for i in 1 2 3; do apk add --no-cache git unzip && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
+      # plain git fetch of the exact commit under test (no checkout action, so no nodejs)
+      - run: |
+          for i in 1 2 3; do
+            rm -rf .git
+            git init -q . \
+              && git remote add origin "$(echo "$SERVER_URL" | sed "s#://#://ci:$TOKEN@#")/$REPO.git" \
+              && git fetch -q --depth 1 origin "$SHA" \
+              && git checkout -q FETCH_HEAD && exit 0
+            echo "attempt $i failed"; sleep 5
+          done; exit 1
+        env:
+          SERVER_URL: ${{ github.server_url }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
       - run: |
           for i in 1 2 3; do curl -fsS -o /tmp/composer-setup.php https://getcomposer.org/installer && php /tmp/composer-setup.php --quiet --install-dir=/usr/local/bin --filename=composer && exit 0; echo "attempt $i failed"; sleep 5; done; exit 1
       - run: |
